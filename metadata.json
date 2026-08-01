@@ -1,0 +1,6 @@
+{
+  "name": "Knews254",
+  "description": "World-class digital media platform for Kenya, East Africa, and the Global Diaspora.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
