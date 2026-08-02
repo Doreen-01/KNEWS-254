@@ -133,13 +133,19 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Brand Info & Newsletter */}
           <div className="md:col-span-4 space-y-5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-red-800 border border-red-500 flex items-center justify-center font-black text-white text-xl shadow-lg">
-                  K
+              <div className="flex items-center gap-3 group">
+                {/* Kenya Flag Emblem Badge matching Header */}
+                <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shadow-lg group-hover:border-red-500 transition shrink-0">
+                  <span className="font-black text-2xl text-white tracking-tighter">K</span>
+                  <div className="absolute bottom-0 inset-x-0 h-2 flex">
+                    <div className="w-1/3 bg-slate-950" />
+                    <div className="w-1/3 bg-red-600" />
+                    <div className="w-1/3 bg-emerald-600" />
+                  </div>
                 </div>
                 <div>
-                  <span className="font-black text-2xl text-white tracking-tight">KNEWS<span className="text-red-600">254</span></span>
-                  <span className="block text-[9px] font-mono text-slate-400 tracking-widest uppercase">Verified Kenya Newsroom</span>
+                  <span className="font-black text-2xl text-white tracking-tight font-serif">KNEWS<span className="text-red-600 font-serif">254</span></span>
+                  <span className="block text-[9px] font-mono text-slate-400 tracking-widest uppercase font-bold">Verified Kenya Newsroom</span>
                 </div>
               </div>
 

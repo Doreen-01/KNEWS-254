@@ -69,8 +69,8 @@ interface StaffUser {
 }
 
 export const AdminCmsPortal: React.FC = () => {
-  // Registered Staff Database & Password Vault (Coded, only Chief Admin Kelly Muthomi Kinoti has full view)
-  const [staffList, setStaffList] = useState<StaffUser[]>([
+  // Default Vetted Newsroom Staff Members
+  const DEFAULT_STAFF: StaffUser[] = [
     {
       id: 'staff-001',
       name: 'Kelly Muthomi Kinoti',
@@ -163,7 +163,130 @@ export const AdminCmsPortal: React.FC = () => {
       passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: '5 mins ago'
     }
-  ]);
+  ];
+
+  // Registered Vetted Staff Database & Password Vault (Persisted in localStorage)
+  const [staffList, setStaffList] = useState<StaffUser[]>(() => {
+    const saved = localStorage.getItem('knews254_staff_list');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return DEFAULT_STAFF;
+  });
+
+  // Newsroom Vetting & Accreditation Applicants Queue
+  const [vettingQueue, setVettingQueue] = useState(() => {
+    const saved = localStorage.getItem('knews254_vetting_queue');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      {
+        id: 'vet-101',
+        name: 'David Otieno Kinuthia',
+        email: 'david.otieno@knews254.co.ke',
+        phone: '+254 712 345 678',
+        department: 'Nyanza & Kisumu Bureau',
+        role: 'Senior Field Reporter & Audio Podcast Host',
+        experience: '6 Years Broadcast Journalism',
+        credentialsBio: 'Former KTN News regional reporter covering devolution & county assembly politics in Western & Nyanza.',
+        score: '96/100',
+        appliedDate: 'Today',
+        status: 'PENDING_EXECUTIVE_VETTING'
+      },
+      {
+        id: 'vet-102',
+        name: 'Catherine Njeri Wambui',
+        email: 'catherine.wambui@knews254.co.ke',
+        phone: '+254 722 987 654',
+        department: 'Multimedia & Podcast Studio Desk',
+        role: 'Podcast Producer & Host (Politics Uncut)',
+        experience: '4 Years Radio & Digital Audio',
+        credentialsBio: 'Experienced audio engineer & investigative podcaster specializing in East African macroeconomic debates.',
+        score: '98/100',
+        appliedDate: 'Yesterday',
+        status: 'PENDING_EXECUTIVE_VETTING'
+      }
+    ];
+  });
+
+  // Modal State for Staff Accreditation Vetting Application
+  const [showVettingModal, setShowVettingModal] = useState(false);
+  const [vettingSuccessMsg, setVettingSuccessMsg] = useState('');
+  const [vettingForm, setVettingForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    department: 'Newsroom & Reporting Bureau',
+    role: 'Reporter / Journalist',
+    experience: '3+ Years Digital Media',
+    credentialsBio: ''
+  });
+
+  const handleApplyVetting = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vettingForm.name.trim() || !vettingForm.email.trim()) return;
+
+    const newRequest = {
+      id: `vet-${Date.now()}`,
+      name: vettingForm.name.trim(),
+      email: vettingForm.email.trim().toLowerCase(),
+      phone: vettingForm.phone.trim() || '+254 700 000 000',
+      department: vettingForm.department,
+      role: vettingForm.role,
+      experience: vettingForm.experience,
+      credentialsBio: vettingForm.credentialsBio || 'Journalist applying for accredited newsroom staff access.',
+      score: '92/100',
+      appliedDate: 'Just Now',
+      status: 'PENDING_EXECUTIVE_VETTING'
+    };
+
+    const updatedQueue = [newRequest, ...vettingQueue];
+    setVettingQueue(updatedQueue);
+    localStorage.setItem('knews254_vetting_queue', JSON.stringify(updatedQueue));
+
+    setVettingSuccessMsg(`✓ Vetting Application Submitted! Only accredited staff may access the CMS. Chairman Kelly Muthomi Kinoti or Editor-in-Chief Muchui Mwirigi will review your credentials.`);
+    setVettingForm({
+      name: '',
+      email: '',
+      phone: '',
+      department: 'Newsroom & Reporting Bureau',
+      role: 'Reporter / Journalist',
+      experience: '3+ Years Digital Media',
+      credentialsBio: ''
+    });
+  };
+
+  // Executive Staff Vetting Approval Handler
+  const handleApproveStaffVetting = (candId: string) => {
+    const cand = vettingQueue.find(q => q.id === candId);
+    if (!cand) return;
+
+    // Create accredited StaffUser
+    const newStaffUser: StaffUser = {
+      id: `staff-${Date.now().toString().slice(-4)}`,
+      name: cand.name,
+      email: cand.email,
+      role: cand.role,
+      department: cand.department,
+      clearanceLevel: 'LEVEL 2 VETTED JOURNALIST & PODCASTER',
+      isChiefAdmin: false,
+      securityCode: `${cand.name.substring(0, 3).toUpperCase()}-VETTED-CMS`,
+      passwordHash: '•••••••••••• (67086708Km.)',
+      passwordStatus: 'ACTIVE_ENCRYPTED',
+      lastLogin: 'Vetted & Approved Just Now'
+    };
+
+    const updatedStaffList = [...staffList, newStaffUser];
+    setStaffList(updatedStaffList);
+    localStorage.setItem('knews254_staff_list', JSON.stringify(updatedStaffList));
+
+    const updatedQueue = vettingQueue.map(q => q.id === candId ? { ...q, status: 'VETTED_APPROVED' } : q);
+    setVettingQueue(updatedQueue);
+    localStorage.setItem('knews254_vetting_queue', JSON.stringify(updatedQueue));
+
+    alert(`✓ [VETTING SUCCESS] ${cand.name} has been vetted & accredited by Executive Command! They can now log into the CMS using ${cand.email}.`);
+  };
 
   // Authenticated Session State
   const [currentUser, setCurrentUser] = useState<StaffUser | null>(() => {
@@ -219,52 +342,37 @@ export const AdminCmsPortal: React.FC = () => {
         return;
       }
 
-      // 1. Chief Administrator Kelly Muthomi Kinoti
-      if (
-        emailTrim === 'kellymuthomi22@gmail.com' ||
-        emailTrim === 'kellymuthomi@knews254.co.ke'
-      ) {
-        const user = staffList[0];
-        setCurrentUser(user);
-        localStorage.setItem('knews254_staff_session', JSON.stringify(user));
-        localStorage.setItem('knews254_superadmin_auth', 'true');
-        setIsLoggingIn(false);
-        setLoginError('');
-        return;
-      }
-
-      // 2. Customer Support Officer Doreen Ngugi Nkonge
-      if (
-        emailTrim === 'doreenngugi38@gmail.com' ||
-        emailTrim === 'doreen.ngugi@knews254.co.ke'
-      ) {
-        const user = staffList[1];
-        setCurrentUser(user);
-        localStorage.setItem('knews254_staff_session', JSON.stringify(user));
-        setIsLoggingIn(false);
-        setLoginError('');
-        return;
-      }
-
-      // 3. Other Staff
+      // Check against accredited staffList (includes all vetted staff approved by Super Admin / Chairman)
       const matchStaff = staffList.find(s => {
         const e = s.email.toLowerCase();
         if (e === emailTrim) return true;
+        if (s.name.toLowerCase().includes('kelly') && (emailTrim.includes('kellymuthomi') || emailTrim.includes('kelly'))) return true;
+        if (s.name.toLowerCase().includes('doreen') && (emailTrim.includes('doreenngugi') || emailTrim.includes('doreen'))) return true;
         if (s.name.toLowerCase().includes('alfred') && (emailTrim.includes('alfredmwenda') || emailTrim.includes('alfred.mwenda'))) return true;
         if (s.name.toLowerCase().includes('linah') && (emailTrim.includes('linahkawira') || emailTrim.includes('linah.kawira'))) return true;
         if (s.name.toLowerCase().includes('muchui') && (emailTrim.includes('muchuidk') || emailTrim.includes('muchui.dk'))) return true;
         if (s.name.toLowerCase().includes('scholastica') && (emailTrim.includes('scholastica') || emailTrim.includes('karwitha'))) return true;
         return false;
       });
+
       if (matchStaff) {
         setCurrentUser(matchStaff);
         localStorage.setItem('knews254_staff_session', JSON.stringify(matchStaff));
+        if (matchStaff.isChiefAdmin) {
+          localStorage.setItem('knews254_superadmin_auth', 'true');
+        }
         setIsLoggingIn(false);
         setLoginError('');
         return;
       }
 
-      setLoginError('Access Denied: Registered staff email address not found in newsroom directory.');
+      // Check if candidate has submitted vetting request
+      const pendingVet = vettingQueue.find(v => v.email.toLowerCase() === emailTrim);
+      if (pendingVet) {
+        setLoginError(`Access Restricted: Your vetting application (${pendingVet.name}) is currently under review by Chairman Kelly Muthomi Kinoti & Editor-in-Chief Muchui Mwirigi. You will be able to log in as soon as executive approval is granted.`);
+      } else {
+        setLoginError(`Access Denied: Registered staff email address not found among accredited newsroom personnel. If you are a staff member or podcast host, click "Request Staff Accreditation & Vetting" below.`);
+      }
       setIsLoggingIn(false);
     }, 450);
   };
@@ -672,6 +780,38 @@ export const AdminCmsPortal: React.FC = () => {
             </button>
           </form>
 
+          {/* VETTING & ACCREDITATION APPLICATION CALLOUT */}
+          <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-3 text-left shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs font-mono uppercase">
+                <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>New Staff / Podcast Host Accreditation</span>
+              </div>
+              <span className="text-[10px] bg-amber-950 text-amber-400 font-mono font-bold px-2 py-0.5 rounded border border-amber-800 uppercase">
+                VETTING REQUIRED
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Are you a newly assigned reporter, columnist, or podcast host? Submit your credentials to Executive Chairman <strong className="text-white">Kelly Muthomi Kinoti</strong> and Editor-in-Chief <strong className="text-white">Muchui Mwirigi</strong> for newsroom vetting & access clearance.
+            </p>
+
+            {vettingSuccessMsg ? (
+              <div className="bg-emerald-950/90 border border-emerald-500 text-emerald-200 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{vettingSuccessMsg}</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowVettingModal(true)}
+                className="w-full bg-slate-950 hover:bg-slate-800 text-amber-400 hover:text-amber-300 font-extrabold text-xs py-2.5 px-4 rounded-xl border border-amber-500/40 flex items-center justify-center gap-2 transition cursor-pointer font-mono"
+              >
+                <UserCheck className="w-4 h-4 text-amber-400" />
+                Apply for Staff Vetting & Accreditation
+              </button>
+            )}
+          </div>
+
           {/* Password Governance & Encryption Policy Notice */}
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 text-left space-y-2 shadow-inner">
             <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs font-bold uppercase">
@@ -682,6 +822,135 @@ export const AdminCmsPortal: React.FC = () => {
               All staff members log in using their registered staff email address and security password <code className="bg-slate-950 text-amber-400 px-1.5 py-0.5 rounded font-mono border border-slate-700 font-bold">67086708Km.</code> (including the trailing period). Password records and command access levels are managed under the authority of Chief Administrator <strong className="text-slate-200">Kelly Muthomi Kinoti</strong>.
             </p>
           </div>
+
+          {/* MODAL: STAFF ACCREDITATION VETTING FORM */}
+          {showVettingModal && (
+            <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-slate-900 border-2 border-amber-500/50 rounded-3xl max-w-lg w-full p-6 space-y-5 relative text-slate-100 shadow-2xl">
+                <button
+                  onClick={() => setShowVettingModal(false)}
+                  className="absolute top-5 right-5 text-slate-400 hover:text-white font-bold text-lg"
+                >
+                  ✕
+                </button>
+
+                <div className="border-b border-slate-800 pb-3">
+                  <div className="inline-flex items-center gap-1.5 bg-amber-950 text-amber-400 border border-amber-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                    KNEWS254 EXECUTIVE ACCREDITATION DESK
+                  </div>
+                  <h3 className="text-xl font-black text-white font-serif">Apply for Staff Vetting & Access</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Submit your details for review by Chairman Kelly Muthomi Kinoti & Editor-in-Chief Muchui Mwirigi.
+                  </p>
+                </div>
+
+                <form onSubmit={handleApplyVetting} className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Full Official Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={vettingForm.name}
+                      onChange={e => setVettingForm({ ...vettingForm, name: e.target.value })}
+                      placeholder="e.g. Scholastica Karwitha / David Otieno"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-sans"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Official Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={vettingForm.email}
+                        onChange={e => setVettingForm({ ...vettingForm, email: e.target.value })}
+                        placeholder="reporter@knews254.co.ke"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">WhatsApp / Mobile Phone</label>
+                      <input
+                        type="text"
+                        required
+                        value={vettingForm.phone}
+                        onChange={e => setVettingForm({ ...vettingForm, phone: e.target.value })}
+                        placeholder="+254 700 000 000"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Department / Bureau</label>
+                      <select
+                        value={vettingForm.department}
+                        onChange={e => setVettingForm({ ...vettingForm, department: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
+                      >
+                        <option>Newsroom & Reporting Bureau</option>
+                        <option>Podcast & Multimedia Studio</option>
+                        <option>Politics & Elections Desk</option>
+                        <option>County Correspondents (47 Counties)</option>
+                        <option>Sports & Entertainment Bureau</option>
+                        <option>Business & Markets Desk</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Target Staff Role</label>
+                      <select
+                        value={vettingForm.role}
+                        onChange={e => setVettingForm({ ...vettingForm, role: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
+                      >
+                        <option>Reporter / Journalist</option>
+                        <option>Podcast Producer & Host</option>
+                        <option>County Bureau Correspondent</option>
+                        <option>Columnist & Opinion Writer</option>
+                        <option>Fact Checker & Investigator</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-300 mb-1">Press Credentials / Brief Bio</label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={vettingForm.credentialsBio}
+                      onChange={e => setVettingForm({ ...vettingForm, credentialsBio: e.target.value })}
+                      placeholder="Detail your media background, previous news organizations, press pass, or podcast experience..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowVettingModal(false)}
+                      className="w-1/3 bg-slate-950 border border-slate-800 text-slate-400 font-bold text-xs py-3 rounded-xl hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      onClick={() => {
+                        setShowVettingModal(false);
+                      }}
+                      className="w-2/3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold text-xs py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 font-mono uppercase tracking-wider cursor-pointer"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      Submit Vetting Request
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1652,48 +1921,130 @@ export const AdminCmsPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 4: HR & APPLICANTS RECRUITMENT PORTAL */}
+      {/* TAB 4: HR & EXECUTIVE VETTING ACCREDITATION PORTAL */}
       {activeTab === 'hr' && (
-        <div className="space-y-5">
-          <div>
-            <h3 className="font-black text-lg text-white font-serif">HR Recruitment & Applicant Portal</h3>
-            <p className="text-xs text-slate-400">Review job applications, inspect attached candidate CVs, and schedule interviews.</p>
-          </div>
-
-          <div className="space-y-3.5">
-            {candidates.map((cand) => (
-              <div key={cand.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800/90 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-xl">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-extrabold text-white text-base">{cand.name}</h4>
-                    <span className="bg-emerald-950 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-emerald-800">
-                      Score: {cand.score}
-                    </span>
-                  </div>
-                  <p className="text-red-400 font-bold text-xs mt-0.5">{cand.position}</p>
-                  <p className="text-slate-400 text-[11px] font-mono mt-1">{cand.email} • {cand.experience} Experience • Applied {cand.appliedDate}</p>
+        <div className="space-y-8">
+          {/* Executive Staff Vetting Queue */}
+          <div className="bg-slate-950 p-6 rounded-3xl border-2 border-amber-500/40 space-y-6 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-amber-950 text-amber-400 border border-amber-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  EXECUTIVE VETTING & ACCREDITATION DESK
                 </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white font-serif">
+                  Newsroom & Podcast Staff Vetting Queue ({vettingQueue.length})
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Only accredited candidates vetted & approved by Chairman <strong className="text-slate-200">Kelly Muthomi Kinoti</strong> or Editor-in-Chief <strong className="text-slate-200">Muchui Mwirigi</strong> are granted CMS staff access.
+                </p>
+              </div>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="bg-slate-900 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold">
-                    {cand.status}
-                  </span>
-
-                  <select
-                    value={cand.status}
-                    onChange={(e) => handleApplicantStatus(cand.id, e.target.value)}
-                    className="bg-slate-900 border border-slate-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer"
-                  >
-                    <option>Under Review</option>
-                    <option>Shortlisted</option>
-                    <option>Interview Scheduled</option>
-                    <option>Offer Made</option>
-                    <option>Hired</option>
-                    <option>Rejected</option>
-                  </select>
+              <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center gap-3">
+                <UserCheck className="w-5 h-5 text-amber-400 shrink-0" />
+                <div className="text-xs font-mono">
+                  <span className="block text-[10px] text-slate-400 uppercase">Vetting Protocol</span>
+                  <span className="font-bold text-white">Strict Accreditation Required</span>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="space-y-4">
+              {vettingQueue.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-xs font-mono">
+                  No pending vetting applications at this time.
+                </div>
+              ) : (
+                vettingQueue.map((cand: any) => (
+                  <div key={cand.id} className="bg-slate-900 p-5 rounded-2xl border border-slate-800 space-y-4 text-xs shadow-xl">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-extrabold text-white text-base">{cand.name}</h4>
+                          <span className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded border uppercase ${
+                            cand.status === 'VETTED_APPROVED' 
+                              ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                              : 'bg-amber-950 text-amber-400 border-amber-800'
+                          }`}>
+                            {cand.status === 'VETTED_APPROVED' ? '✓ VETTED & ACTIVE STAFF' : 'PENDING EXECUTIVE VETTING'}
+                          </span>
+                        </div>
+                        <p className="text-red-400 font-bold text-xs mt-0.5">{cand.role} • {cand.department}</p>
+                        <p className="text-slate-400 text-[11px] font-mono mt-1">
+                          Email: <strong className="text-slate-200">{cand.email}</strong> • Phone: <strong className="text-slate-200">{cand.phone}</strong> • Submitted: {cand.appliedDate}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        {cand.status !== 'VETTED_APPROVED' ? (
+                          <button
+                            onClick={() => handleApproveStaffVetting(cand.id)}
+                            className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs shadow-lg border border-emerald-500/40 flex items-center gap-2 font-mono uppercase cursor-pointer"
+                          >
+                            <ShieldCheck className="w-4 h-4 text-emerald-300" />
+                            Approve & Vet Staff Access
+                          </button>
+                        ) : (
+                          <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5">
+                            <CheckCircle className="w-4 h-4 text-emerald-400" />
+                            Access Active
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-slate-300 leading-relaxed font-sans bg-slate-950 p-3 rounded-xl border border-slate-800 text-[11px]">
+                      <strong className="text-amber-400 font-mono">Press Credentials & Bio: </strong>
+                      {cand.credentialsBio}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* HR General Recruitment Table */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-black text-lg text-white font-serif">General HR Job Applicants Portal</h3>
+              <p className="text-xs text-slate-400">Review job applications, inspect candidate scores, and manage interview schedules.</p>
+            </div>
+
+            <div className="space-y-3.5">
+              {candidates.map((cand) => (
+                <div key={cand.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800/90 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-xl">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-extrabold text-white text-base">{cand.name}</h4>
+                      <span className="bg-emerald-950 text-emerald-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-emerald-800">
+                        Score: {cand.score}
+                      </span>
+                    </div>
+                    <p className="text-red-400 font-bold text-xs mt-0.5">{cand.position}</p>
+                    <p className="text-slate-400 text-[11px] font-mono mt-1">{cand.email} • {cand.experience} Experience • Applied {cand.appliedDate}</p>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="bg-slate-900 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-bold">
+                      {cand.status}
+                    </span>
+
+                    <select
+                      value={cand.status}
+                      onChange={(e) => handleApplicantStatus(cand.id, e.target.value)}
+                      className="bg-slate-900 border border-slate-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer"
+                    >
+                      <option>Under Review</option>
+                      <option>Shortlisted</option>
+                      <option>Interview Scheduled</option>
+                      <option>Offer Made</option>
+                      <option>Hired</option>
+                      <option>Rejected</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
