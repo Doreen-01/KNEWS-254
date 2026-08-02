@@ -214,20 +214,20 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-slate-950 border-b border-slate-800 text-slate-100 shadow-2xl transition-all">
+    <header className="sticky top-0 z-50 bg-slate-950 border-b border-slate-800 text-slate-100 shadow-2xl transition-all max-w-full overflow-x-clip">
       {/* 1. TOP GLOBAL INTELLIGENCE & MARKETS STRIP */}
-      <div className="bg-slate-900/90 px-4 py-1.5 text-xs border-b border-slate-800/80">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-slate-900/90 px-2 sm:px-4 py-1.5 text-xs border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-3">
           {/* Live Breaking News Continuous Flow Ticker */}
-          <div className="flex items-center gap-2 overflow-hidden flex-1 max-w-2xl lg:max-w-3xl">
-            <span className="bg-red-600 text-white font-black px-2 py-0.5 rounded text-[10px] tracking-widest uppercase flex items-center gap-1 shrink-0 shadow-sm z-10">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-hidden flex-1 min-w-0 max-w-2xl lg:max-w-3xl">
+            <span className="bg-red-600 text-white font-black px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] tracking-wider sm:tracking-widest uppercase flex items-center gap-1 shrink-0 shadow-sm z-10">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-              BREAKING
+              <span>BREAKING</span>
             </span>
-            <div className="overflow-hidden whitespace-nowrap relative flex-1 cursor-default">
-              <div className="animate-marquee flex items-center gap-8">
+            <div className="overflow-hidden whitespace-nowrap relative flex-1 min-w-0 cursor-default">
+              <div className="animate-marquee flex items-center gap-6 sm:gap-8">
                 {[...breakingNewsHeadlines, ...breakingNewsHeadlines].map((headline, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-3 text-slate-200 text-xs font-medium hover:text-white transition">
+                  <span key={idx} className="inline-flex items-center gap-2 sm:gap-3 text-slate-200 text-[11px] sm:text-xs font-medium hover:text-white transition">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block shrink-0" />
                     <span>{headline}</span>
                   </span>
@@ -236,7 +236,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <button 
               onClick={() => setTickerMuted(!tickerMuted)} 
-              className="text-slate-400 hover:text-white transition shrink-0 ml-1 z-10"
+              className="text-slate-400 hover:text-white transition shrink-0 ml-0.5 sm:ml-1 z-10 p-1"
               title="Toggle audio alerts"
             >
               {tickerMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-red-400" />}
@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Financial Markets, City Weather & Regional Edition Controls */}
-          <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px] shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 text-slate-400 font-mono text-[11px] shrink-0">
             {/* Markets ticker */}
             <div className="hidden xl:flex items-center gap-3 border-r border-slate-800 pr-3">
               <span>USD/KES: <strong className="text-emerald-400 font-bold">128.40 ▲</strong></span>
@@ -294,24 +294,24 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Language Switcher with 44px Touch Targets */}
-            <div className="flex items-center bg-slate-950 rounded-lg p-1 border border-slate-800 gap-1">
+            <div className="flex items-center bg-slate-950 rounded-lg p-0.5 sm:p-1 border border-slate-800 gap-0.5 sm:gap-1">
               <button 
                 onClick={() => setLanguage('en')} 
-                className={`min-w-[36px] min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center ${language === 'en' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                className={`min-w-[30px] sm:min-w-[36px] min-h-[30px] sm:min-h-[36px] px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-bold transition flex items-center justify-center ${language === 'en' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                 aria-label="Switch to English language"
               >
                 EN
               </button>
               <button 
                 onClick={() => setLanguage('sw')} 
-                className={`min-w-[36px] min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center ${language === 'sw' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                className={`min-w-[30px] sm:min-w-[36px] min-h-[30px] sm:min-h-[36px] px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-bold transition flex items-center justify-center ${language === 'sw' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                 aria-label="Switch to Swahili language"
               >
                 SW
               </button>
               <button 
                 onClick={() => setLanguage('sheng')} 
-                className={`min-w-[36px] min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center ${language === 'sheng' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                className={`min-w-[34px] sm:min-w-[36px] min-h-[30px] sm:min-h-[36px] px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-bold transition flex items-center justify-center ${language === 'sheng' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
                 aria-label="Switch to Sheng dialect"
               >
                 SHENG
@@ -322,36 +322,36 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* 2. MASTER BRAND MASTHEAD & SEARCH BAR */}
-      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-6">
         {/* Newspaper Masthead Brand */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
           <button 
             onClick={() => {
               setActiveTab('platform');
               setSelectedCategory('home');
             }} 
-            className="flex items-center gap-3 text-left group focus:outline-none"
+            className="flex items-center gap-2 sm:gap-3 text-left group focus:outline-none min-w-0"
           >
             {/* Kenya Flag Emblem Badge */}
-            <div className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shadow-lg group-hover:border-red-500 transition">
-              <span className="font-black text-2xl text-white tracking-tighter">K</span>
-              <div className="absolute bottom-0 inset-x-0 h-2 flex">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shadow-lg group-hover:border-red-500 transition shrink-0">
+              <span className="font-black text-xl sm:text-2xl text-white tracking-tighter">K</span>
+              <div className="absolute bottom-0 inset-x-0 h-1.5 sm:h-2 flex">
                 <div className="w-1/3 bg-slate-950" />
                 <div className="w-1/3 bg-red-600" />
                 <div className="w-1/3 bg-emerald-600" />
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-2xl md:text-3xl tracking-tight text-white group-hover:text-red-500 transition font-serif">KNEWS</span>
-                <span className="font-black text-2xl md:text-3xl tracking-tight text-red-600 font-serif">254</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className="font-black text-xl sm:text-2xl md:text-3xl tracking-tight text-white group-hover:text-red-500 transition font-serif">KNEWS</span>
+                <span className="font-black text-xl sm:text-2xl md:text-3xl tracking-tight text-red-600 font-serif">254</span>
                 <span className="hidden sm:inline-block bg-slate-800 text-slate-300 font-mono text-[9px] px-1.5 py-0.5 rounded border border-slate-700 uppercase font-bold">
                   PRO
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-slate-400 -mt-0.5">
-                <span>TRUTH • INDEPENDENCE • INTEGRITY</span>
+              <div className="flex items-center gap-2 text-[9px] sm:text-[10px] uppercase font-bold tracking-wider sm:tracking-widest text-slate-400 -mt-0.5 truncate">
+                <span className="truncate">TRUTH • INDEPENDENCE • INTEGRITY</span>
                 <span className="hidden lg:inline text-slate-600">•</span>
                 <span className="hidden lg:inline text-slate-500 font-normal">{currentDateStr}</span>
               </div>
@@ -385,14 +385,14 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Action Center: Admin CMS, AI Assistant, Alerts & Workspace Switcher */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Breaking Alerts Bell */}
           <button
             onClick={() => setHasNotifications(!hasNotifications)}
-            className="p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-xl transition relative"
+            className="p-1.5 sm:p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-xl transition relative"
             title="Toggle Breaking Alerts"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             {hasNotifications && (
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full animate-ping" />
             )}
@@ -413,11 +413,11 @@ export const Header: React.FC<HeaderProps> = ({
           {/* CMS Admin Portal */}
           <button
             onClick={onOpenCms}
-            className="bg-slate-900 hover:bg-slate-800 text-red-400 hover:text-red-300 border border-red-500/30 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+            className="hidden sm:flex bg-slate-900 hover:bg-slate-800 text-red-400 hover:text-red-300 border border-red-500/30 px-3 py-2 rounded-xl text-xs font-bold transition items-center gap-1.5 shadow-sm"
             title="Open Editorial CMS & Infrastructure Portal"
           >
             <FileCheck className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">CMS Admin</span>
+            <span>CMS Admin</span>
           </button>
 
           {/* AI Desk Assistant */}
@@ -431,10 +431,10 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {/* Workspace View Switcher: Live Media vs Executive PRD */}
-          <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center shadow-inner">
+          <div className="bg-slate-900 p-0.5 sm:p-1 rounded-xl border border-slate-800 flex items-center shadow-inner">
             <button
               onClick={() => setActiveTab('platform')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition ${
                 activeTab === 'platform'
                   ? 'bg-red-600 text-white shadow'
                   : 'text-slate-400 hover:text-white'
@@ -446,7 +446,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={() => setActiveTab('prd')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition ${
                 activeTab === 'prd'
                   ? 'bg-emerald-600 text-white shadow'
                   : 'text-slate-400 hover:text-white'
@@ -460,7 +460,8 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mobile Navigation Drawer Trigger */}
           <button 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 bg-slate-900 rounded-xl text-slate-300 hover:text-white border border-slate-800"
+            className="md:hidden p-1.5 sm:p-2 bg-slate-900 rounded-xl text-slate-300 hover:text-white border border-slate-800"
+            aria-label="Toggle mobile menu"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -469,9 +470,9 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* 3. CATEGORY NAVIGATION STRIP & MEGA MENU */}
       {activeTab === 'platform' && (
-        <div className="bg-slate-900/90 backdrop-blur border-t border-slate-800/80 px-4 relative">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 overflow-x-auto no-scrollbar py-2">
-            <div className="flex items-center gap-1">
+        <div className="bg-slate-900/90 backdrop-blur border-t border-slate-800/80 px-2 sm:px-4 relative max-w-full overflow-hidden">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 py-2 w-full min-w-0">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0 flex-1 pr-1">
               {mainCategoryItems.map((cat) => (
                 <button
                   key={cat.id}
@@ -479,7 +480,7 @@ export const Header: React.FC<HeaderProps> = ({
                     setSelectedCategory(cat.id);
                     setActiveDropdown(null);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition relative ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition relative shrink-0 ${
                     selectedCategory === cat.id
                       ? 'bg-slate-950 text-red-400 border border-red-500/40 shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -499,14 +500,14 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Mega Menu Full Sections Toggle Button */}
             <button
               onClick={() => setActiveDropdown(activeDropdown === 'all' ? null : 'all')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold shrink-0 transition ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold shrink-0 transition ${
                 activeDropdown === 'all'
                   ? 'bg-red-600 text-white shadow'
                   : 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>All Sections</span>
+              <span className="hidden xs:inline">All Sections</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${activeDropdown === 'all' ? 'rotate-180' : ''}`} />
             </button>
           </div>

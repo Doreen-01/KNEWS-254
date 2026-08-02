@@ -732,228 +732,337 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
     return <HelpSupportPage />;
   }
 
+  // Render Sitemap Page
+  if (category === 'sitemap') {
+    return <SitemapPage onSelectCategory={onSelectCategory} />;
+  }
+
   // Render Policy Pages (Editorial, Ethics, AI, Fact-Check, Anonymous Sources, Privacy, Terms, Corrections, etc.)
   const getPolicyContent = () => {
     switch (category) {
       case 'editorial-policy':
         return {
-          title: 'Editorial Standards & Code of Practice',
-          updated: 'Updated July 2026 • Verified by Knews254 Standards Board',
-          intro: `Knews254 operates under absolute editorial independence. We serve the East African public with accurate, non-partisan, and accountable journalism across all 47 counties.`,
+          title: 'Knews254 Editorial Charter & Standards of Journalism',
+          updated: 'Updated August 2026 • Verified by Knews254 Standards Board & Media Council of Kenya',
+          intro: `Knews254 operates under absolute editorial independence, constitutional press freedom guarantees (Article 34 of the Constitution of Kenya 2010), and the Media Council of Kenya Code of Conduct. We serve all 47 counties of Kenya and the broader East African region with non-partisan, accurate, and accountable news reporting.`,
           sections: [
             {
-              heading: '1. Truthfulness & Dual Verification',
-              content: 'Every factual assertion published by Knews254 must be corroborated by at least two independent primary sources. We do not publish unverified social media rumors or uncredited third-party claims without explicit caveats and secondary verification.'
+              heading: '1. Dual-Source Verification & Fact Integrity',
+              content: 'Every factual statement published by Knews254 must be verified by at least two independent primary sources. Field reports from our 47 county correspondents are cross-referenced with official public records, Hansard transcripts, legal filings, and sworn affidavits before publication. Social media posts, unverified viral video clips, or anonymous commentary are never reported as factual without explicit disclaimers and independent secondary confirmation.'
             },
             {
-              heading: '2. Independence & Conflicts of Interest',
-              content: 'Journalists and editors are strictly prohibited from accepting financial gifts, sponsored trips, or political favors. All editorial content is firewalled from commercial and advertising departments.'
+              heading: '2. Non-Partisan Independence & Commercial Firewall',
+              content: 'Knews254 is an independent news organization. Our newsroom operates behind a strict firewall separate from commercial advertising, corporate sponsors, and political entities. Editors and reporters are strictly forbidden from accepting financial gifts, sponsored trips, honorariums, or political favors. Commercial advertisers and brand sponsors hold zero advance sight, veto power, or editorial control over any published story.'
             },
             {
-              heading: '3. Fairness & Right of Reply',
-              content: 'Individuals or institutions subject to critical investigative findings are provided reasonable time (minimum 24 hours) to offer a formal right of reply prior to publication.'
+              heading: '3. Fairness & Right of Reply Protocol',
+              content: 'Whenever Knews254 investigates or reports on allegations involving an individual, corporation, state department, or public official, we adhere to the statutory Right of Reply. Affected parties are provided a fair and reasonable opportunity (minimum 24 hours notice for non-breaking investigative exposes) to respond to specific findings prior to publication. Their responses are published with equal prominence.'
+            },
+            {
+              heading: '4. Devolution & 47 County Financial Oversight',
+              content: 'Devolution under Chapter 11 of the Constitution of Kenya is central to our mission. Knews254 prioritizes reporting on County Assembly bills, Public Accounts Committee (PAC) audits, Equitable Share allocations by the National Treasury, and public infrastructure delivery in all 47 counties to foster grassroots citizen accountability.'
+            },
+            {
+              heading: '5. Sourcing Levels & On-the-Record Default',
+              content: 'Our default standard is on-the-record reporting. When sources require protection due to genuine threats of retaliation, loss of employment, or physical danger, we adhere to strictly defined rules: On Background (attributable to general official role), Deep Background (information usable without attribution), or Off the Record (for lead generation only, requiring secondary verification).'
+            },
+            {
+              heading: '6. Editorial Escalation & Public Ombudsman',
+              content: 'Should a reader or entity believe a story violates our Editorial Charter, a formal grievance may be lodged with our Public Ombudsman Desk. Editorial disputes are escalated directly to Editor-in-Chief Muchui Mwirigi and Executive Chairman Kelly Muthomi Kinoti for binding review.'
             }
           ]
         };
       case 'ethics-policy':
         return {
-          title: 'Journalistic Code of Ethics',
-          updated: 'Updated July 2026 • Media Council of Kenya Compliant',
-          intro: `Our ethical code governs every reporter, photographer, and editor operating under the Knews254 brand.`,
+          title: 'Code of Ethics & Professional Conduct',
+          updated: 'Updated August 2026 • Fully Compliant with MCK Act 2013',
+          intro: `This Code of Ethics governs every journalist, editor, visual producer, and county correspondent representing Knews254. It sets the benchmark for moral integrity, dignity, and public accountability across digital and broadcast platforms.`,
           sections: [
             {
-              heading: '1. Minimizing Harm & Vulnerable Groups',
-              content: 'We exercise extreme care when reporting on victims of crime, children, and traumatized individuals. Names and identities of minors involved in legal proceedings are protected by default.'
+              heading: '1. Protection of Vulnerable Groups & Minors',
+              content: 'Adhering to the Kenya Children Act Cap 141 and international conventions, Knews254 strictly protects the identities of children under 18 involved in court proceedings, abuse investigations, or trauma. We avoid publishing intrusive imagery or full names of victims of sexual violence, crime victims, or mentally distressed individuals without explicit legal consent.'
             },
             {
-              heading: '2. Integrity of Visual Media',
-              content: 'Photographs and video footage are never digitally altered or manipulated to mislead viewers. Staged photojournalism is grounds for immediate editorial termination.'
+              heading: '2. Integrity of Photography, Video & Digital Media',
+              content: 'We uphold absolute visual truth. Photojournalists and digital editors are forbidden from manipulating, altering, staging, or fabricating news photographs or video footage. Basic technical adjustments (cropping, color balance) are permitted only if they do not misrepresent the original context. Staged photojournalism is grounds for immediate termination.'
             },
             {
-              heading: '3. Plagiarism & Attribution',
-              content: 'Knews254 enforces zero tolerance for plagiarism. Direct quotes, data points, and investigative leads from peer publications must be clearly cited.'
+              heading: '3. Zero Tolerance for Paid Coverage ("Brown Envelope" Journalism)',
+              content: 'Knews254 maintains zero tolerance for unscripted commercial payments, cash envelopes, travel allowances, or undisclosed gifts from sources or newsmakers. Any reporter found accepting consideration in exchange for favorable coverage, suppression of news, or selective reporting faces immediate dismissal and revocation of press credentials.'
+            },
+            {
+              heading: '4. Election Reporting & NCIC Anti-Incitement Directives',
+              content: 'During election cycles (including the 2027 General Election), Knews254 journalists adhere strictly to the National Cohesion and Integration Commission (NCIC) guidelines. We actively censor ethnic slurs, hate speech, inflammatory political rhetoric, or unsubstantiated claims of poll rigging designed to incite public unrest.'
+            },
+            {
+              heading: '5. Personal Financial Disclosures & Conflicts of Interest',
+              content: 'Reporters covering business, stock markets (NSE), or corporate dockets must declare any financial holdings, share ownership, or personal ties to companies they report on. No journalist may trade securities based on non-public material information obtained during newsgathering.'
             }
           ]
         };
       case 'ai-policy':
         return {
           title: 'Responsible AI & Newsroom Tech Policy',
-          updated: 'Updated July 2026 • AI Safety & Journalism Governance',
-          intro: `Knews254 utilizes Artificial Intelligence (including Gemini models) solely to assist human journalists, optimize workflow speed, and enhance accessibility.`,
+          updated: 'Updated August 2026 • AI Safety & Journalism Governance Standard',
+          intro: `At Knews254, Artificial Intelligence (powered by Google Gemini models) is deployed as a productivity aid for human journalists. We uphold clear boundary rules to ensure AI enhances analytical speed without eroding human accountability or editorial integrity.`,
           sections: [
             {
-              heading: '1. Human-in-the-Loop Oversight',
-              content: 'AI models NEVER write or publish articles autonomously. Every piece of AI-assisted text, summary, or audio transcription undergoes rigorous review and approval by a senior editor before going live.'
+              heading: '1. Mandatory Human-in-the-Loop Verification',
+              content: 'AI systems NEVER write, edit, or publish news articles autonomously at Knews254. Every AI-assisted summary, transcript, translation, or data breakdown undergoes mandatory manual review, fact-checking, and final approval by a senior human editor before reaching our audience.'
             },
             {
-              heading: '2. Prohibition of Synthetic Media Fraud',
-              content: 'Knews254 strictly forbids deepfakes or generated synthetic images in news coverage. Any AI-generated conceptual graphic or chart is explicitly labeled with clear disclosure tags.'
+              heading: '2. Absolute Ban on Synthetic Media Fraud & Deepfakes',
+              content: 'Knews254 strictly prohibits the generation or publication of synthetic deepfake images, voice clones, or manipulated videos presented as authentic news. Where AI is used to produce conceptual illustrations, charts, or visual infographics, clear visual disclosure tags (e.g., "[AI Generated Infographic]") are permanently embedded.'
             },
             {
-              heading: '3. Data Privacy & Model Safety',
-              content: 'Reader data, private tips, and whistleblower communications are completely excluded from public AI training models.'
+              heading: '3. Data Privacy & Whistleblower Exclusion',
+              content: 'Confidential whistleblower leaks, off-the-record notes, legal documents, and reader personal data are strictly firewalled and excluded from public AI training datasets. All server-side API interactions with generative AI models utilize enterprise zero-retention security protocols.'
+            },
+            {
+              heading: '4. Algorithmic Neutrality & 47-County Bias Mitigation',
+              content: 'We audit custom prompt templates and AI models continuously to prevent regional, political, ethnic, or socio-economic bias. News summarization engines are calibrated to reflect nuanced realities across both urban hubs (Nairobi, Mombasa) and rural county frontiers.'
+            },
+            {
+              heading: '5. Reader Transparency & Disclosure Badges',
+              content: 'Whenever a feature utilizes generative AI—such as our interactive "Ask Gemini AI" reader tool or automated bullet summaries—it is clearly marked with a visible AI badge so readers can distinguish between raw reporter dispatches and AI-assisted summaries.'
             }
           ]
         };
       case 'factcheck-methodology':
         return {
-          title: 'Knews254 Verify Fact-Checking Methodology',
-          updated: 'Updated July 2026 • IFCN Standard Alignment',
-          intro: `Knews254 Verify is our dedicated forensic fact-checking division combating viral misinformation in East Africa.`,
+          title: 'Knews254 Verify Forensic Fact-Checking Methodology',
+          updated: 'Updated August 2026 • Aligned with International Fact-Checking Network (IFCN) Standards',
+          intro: `Knews254 Verify is our dedicated forensic fact-checking unit. We analyze viral rumors, political speeches, state statements, and social media claims to protect the East African public from deliberate disinformation and digital manipulation.`,
           sections: [
             {
-              heading: '1. Selection of Claims',
-              content: 'We prioritize claims made by public officials, political figures, viral social media accounts, and influential entities that impact public health, election integrity, or national stability.'
+              heading: '1. Claim Selection Framework',
+              content: 'We select claims based on public impact, reach, and risk to public interest. Priority is given to statements by elected officials, viral claims regarding public health or safety, economic statistics, and electoral integrity statements surrounding the 2027 General Election.'
             },
             {
-              heading: '2. Evidence Sourcing & Rating System',
-              content: 'We cross-reference claims against official gazettes, parliamentary Hansards, satellite imagery, public budgets, and peer-reviewed studies. Claims are rated objectively: TRUE, PARTIALLY TRUE, MISLEADING, UNVERIFIED, or FALSE.'
+              heading: '2. Multi-Layer Sourcing & Primary Record Examination',
+              content: 'We do not rely on secondary commentary. Our fact-checkers consult primary record repositories including official Kenya Gazettes, Parliamentary Hansards, National Treasury Budget Statements, Kenya National Bureau of Statistics (KNBS) censuses, Central Bank of Kenya (CBK) directives, and satellite data.'
             },
             {
-              heading: '3. Open Methodology & Data Transparency',
-              content: 'Every fact-check report provides links to primary datasets and documents used, allowing readers to audit our findings independently.'
+              heading: '3. Standardized 5-Tier Verification Rating Scale',
+              content: 'Each fact-checked claim is assigned an unambiguous rating: VERIFIED TRUE (100% accurate with primary proof), MOSTLY TRUE (accurate with minor context omissions), MIXED / NEEDS CONTEXT (contains partial truth but misleadingly framed), MISLEADING (selectively manipulated to deceive), or FALSE / FABRICATED (completely unsupported by evidence or demonstrably false).'
+            },
+            {
+              heading: '4. Open Evidence Transparency & Reader Auditability',
+              content: 'Every published fact-check report contains direct links to primary documents, raw datasets, archived web pages, and methodology notes, enabling any citizen or researcher to audit our conclusions independently.'
+            },
+            {
+              heading: '5. Reader Claim Submission & Re-Evaluation Process',
+              content: 'Readers can submit suspicious claims directly to verify@knews254.co.ke or via our WhatsApp desk. If new primary evidence emerges after a rating is published, our team conducts a formal re-evaluation and logs any grade adjustment transparently.'
             }
           ]
         };
       case 'anonymous-sources':
         return {
-          title: 'Anonymous Sources & Whistleblower Policy',
-          updated: 'Updated July 2026 • Shield Protection Protocol',
-          intro: `Anonymous sources are essential for investigative journalism that exposes corruption and abuse of power.`,
+          title: 'Anonymous Sourcing & Whistleblower Protection Charter',
+          updated: 'Updated August 2026 • Encrypted Shield Protection Standard',
+          intro: `Investigative journalism relies on courageous whistleblowers who expose corruption, procurement fraud, and human rights violations. Knews254 provides rigorous legal and technological safeguards to shield confidential sources.`,
           sections: [
             {
-              heading: '1. Sourcing Threshold',
-              content: 'Anonymity is granted only when the information is vital to the public interest, cannot be obtained through on-the-record channels, and exposing the source puts their safety, employment, or liberty at risk.'
+              heading: '1. High Threshold for Granting Anonymity',
+              content: 'Anonymity is never granted for convenience or casual commentary. It is reserved exclusively for situations where the information is of vital public interest, cannot be obtained through official public records, and revealing the source exposes them to physical harm, loss of employment, or criminal retaliation.'
             },
             {
-              heading: '2. Executive Editor Approval',
-              content: 'No single reporter may grant total anonymity independently. The identity of the source must be disclosed confidentially to the Chief Editor for identity verification.'
+              heading: '2. Senior Editorial Authorization Protocol',
+              content: 'No individual field reporter may grant total legal anonymity unilaterally. The true identity of an anonymous source must be disclosed in strict confidence to Editor-in-Chief Muchui Mwirigi or Executive Chairman Kelly Muthomi Kinoti to verify credibility and motives.'
             },
             {
-              heading: '3. Encrypted Tip Channels',
-              content: 'Whistleblowers are encouraged to utilize our secure, end-to-end encrypted dispatch portal or PGP key channels.'
+              heading: '3. Encrypted Technical Whistleblower Portal',
+              content: 'Whistleblowers are advised to communicate via our dedicated secure tipoff endpoint (/api/tipoff), which strips IP addresses, metadata, and browser fingerprints. We also support end-to-end encrypted messaging via Signal and PGP key channels.'
+            },
+            {
+              heading: '4. Shield Safeguards under Kenyan Evidence Law',
+              content: 'Knews254 vigorously defends source confidentiality in court proceedings, invoking journalistic privilege under Article 34(5) of the Constitution of Kenya 2010, which guarantees that journalists shall not be compelled to disclose confidential sources of information.'
+            },
+            {
+              heading: '5. Annual Sourcing Audit',
+              content: 'Our editorial board conducts an annual internal audit to review the frequency and justification of anonymous attributions across all investigative desks, ensuring source reliance remains disciplined and transparent.'
             }
           ]
         };
       case 'transparency-report':
       case 'funding-policy':
         return {
-          title: 'Ownership, Funding & Transparency Report',
-          updated: 'Updated July 2026 • Annual Disclosure Report',
-          intro: `Knews254 Media Group Ltd believes transparency regarding ownership and financial model is vital for public trust.`,
+          title: 'Ownership, Funding & Financial Transparency Report',
+          updated: 'Updated August 2026 • Annual Public Integrity Disclosure',
+          intro: `Public trust demands financial and operational transparency. Knews254 Media Group Ltd provides full disclosure of our corporate structure, ownership, revenue models, and grant governance principles.`,
           sections: [
             {
-              heading: '1. Corporate Structure & Ownership',
-              content: 'Knews254 Media Group Ltd is an independent Kenyan digital media enterprise. We are 100% privately owned with no government shareholding or political party ownership.'
+              heading: '1. Corporate Ownership & Independence',
+              content: 'Knews254 Media Group Ltd is a 100% privately owned, independent Kenyan media enterprise founded by educator and software engineer Kelly Muthomi Kinoti. We have no shareholding by government agencies, state corporations, or political parties.'
             },
             {
-              heading: '2. Revenue Streams',
-              content: 'Our operations are funded through digital programmatic advertising, branded content partnerships, institutional research grants, and reader subscriptions.'
+              heading: '2. Revenue Model Breakdown',
+              content: 'Our media operations are sustained through four primary revenue channels: (a) Programmatic display and video advertising, (b) Clearly labeled commercial sponsored content, (c) Reader digital subscriptions & premium features, and (d) Competitive media development grants.'
             },
             {
-              heading: '3. Grant Sourcing Governance',
-              content: 'All philanthropic or media development grants are accepted strictly on condition of non-interference with editorial decision-making.'
+              heading: '3. Philanthropic & Grant Governance',
+              content: 'Grants from media development organizations or non-profit foundations are accepted strictly on condition of non-interference. Donors hold zero influence over story selection, investigative targets, editorial stance, or hiring decisions.'
+            },
+            {
+              heading: '4. Statutory Regulatory Compliance',
+              content: 'Knews254 is fully registered with the Kenya Revenue Authority (KRA), compliant with the Media Council of Kenya (MCK) digital publisher requirements, and adheres to statutory labor and tax laws of the Republic of Kenya.'
+            },
+            {
+              heading: '5. Public Financial Accountability Summaries',
+              content: 'We publish an annual summary detailing institutional resource allocations across county news bureaus, investigative grants, data infrastructure, and staff development.'
             }
           ]
         };
       case 'community-guidelines':
         return {
-          title: 'Community & Commenting Guidelines',
-          updated: 'Updated July 2026 • Citizen Discussion Standards',
-          intro: `We encourage vibrant, civil debate across our article comment sections, forums, and live election feeds.`,
+          title: 'Community Rules & Citizen Discussion Standards',
+          updated: 'Updated August 2026 • NCIC & Public Discussion Guidelines',
+          intro: `We welcome passionate, diverse, and robust debate across our article comment feeds, county discussion forums, and live election commentary channels. These rules ensure our platform remains safe, civil, and constructive for all readers.`,
           sections: [
             {
-              heading: '1. Zero Tolerance for Hate Speech',
-              content: 'Comments containing ethnic slurs, incitement to violence, sexism, religious hate speech, or personal harassment are automatically filtered and permanently removed.'
+              heading: '1. Zero Tolerance for Tribalism, Hate Speech & Harassment',
+              content: 'Comments containing ethnic slurs, tribal incitement, religious bigotry, misogyny, homophobia, threats of violence, or personal intimidation are prohibited. Violations are automatically flagged and permanently purged under NCIC guidelines.'
             },
             {
-              heading: '2. Commercial Spam & Links',
-              content: 'Promotional spam, affiliate links, and automated bot accounts are blocked by our real-time AI moderation engine.'
+              heading: '2. Civil Debate & Fact-Based Criticism',
+              content: 'Criticism of public officials, policies, and ideas is strongly encouraged, but must remain focused on public records, actions, and evidence. Personal abuse, slander, or publishings of private contact details ("doxxing") will lead to immediate account ban.'
             },
             {
-              heading: '3. Moderation & Appeal Process',
-              content: 'Users whose comments are flagged may appeal decisions directly through our moderation desk.'
+              heading: '3. Commercial Spam, Financial Scams & Bot Detection',
+              content: 'Our real-time security systems automatically block promotional link spam, cryptocurrency schemes, pyramid scheme recruitment, or automated bot posts.'
+            },
+            {
+              heading: '4. Automated & Human Moderation Workflow',
+              content: 'User comments pass through a hybrid filtering engine combining real-time keyword filters with human moderation by our Community Editor team.'
+            },
+            {
+              heading: '5. Account Warnings, Suspensions & Appeal Process',
+              content: 'Users facing comment moderation actions receive automated notices. Account suspensions can be formally appealed by contacting community@knews254.co.ke with your account ID.'
             }
           ]
         };
       case 'takedown-policy':
         return {
-          title: 'Copyright, Takedown & User Content Policy',
-          updated: 'Updated July 2026 • Intellectual Property Compliance',
-          intro: `Knews254 respects intellectual property rights and adheres to international copyright laws and Kenyan copyright statutes.`,
+          title: 'Copyright, Takedown & Intellectual Property Policy',
+          updated: 'Updated August 2026 • Copyright Act Cap 130 (Kenya) Compliant',
+          intro: `Knews254 respects intellectual property rights and expects its readers and content partners to do the same. We adhere to the Copyright Act Cap 130 of the Laws of Kenya and international copyright standards.`,
           sections: [
             {
-              heading: '1. Filing a Takedown Request',
-              content: 'If you believe your copyrighted work, photography, or trademark has been published without authorization, submit a notice containing proof of ownership to legal@knews254.co.ke.'
+              heading: '1. Filing a Formal Takedown Request',
+              content: 'If you believe your copyrighted photograph, video clip, article text, or brand asset has been published on Knews254 without authorization, please submit a written DMCA / Copyright Takedown Notice to legal@knews254.co.ke containing: (a) Identification of the copyrighted work, (b) Direct URL of the material on Knews254, (c) Contact details, and (d) A statement under penalty of perjury that you are the rightful copyright owner or authorized agent.'
             },
             {
-              heading: '2. Processing Timeframes',
-              content: 'Valid copyright takedown notices are processed within 24 business hours following legal review.'
+              heading: '2. 24-Hour Review & Processing Protocol',
+              content: 'Upon receipt of a valid copyright notice, our legal compliance team reviews the claim within 24 business hours. If infringement is verified, the material is immediately removed or disabled.'
+            },
+            {
+              heading: '3. Counter-Notification Procedure',
+              content: 'Content contributors or editors who believe material was removed by mistake may file a formal Counter-Notification detailing fair use or licensing proof.'
+            },
+            {
+              heading: '4. Fair Use & Academic Commentary Exemptions',
+              content: 'Brief quotations, low-resolution screenshots, or official government documents utilized for non-commercial news reporting, commentary, or academic review are published under established Fair Dealing provisions of Kenyan copyright law.'
             }
           ]
         };
       case 'corrections-policy':
         return {
-          title: 'Corrections & Transparency Policy',
-          updated: 'Updated July 2026 • Accuracy & Accountability',
-          intro: `Accuracy is our absolute commitment. When factual errors occur, we correct them swiftly and transparently.`,
+          title: 'Corrections, Errata & Transparency Policy',
+          updated: 'Updated August 2026 • Accountability Standard',
+          intro: `Accuracy is the cornerstone of Knews254. When errors occur, we correct them promptly, transparently, and unreservedly. We believe admitting and correcting mistakes strengthens public trust.`,
           sections: [
             {
-              heading: '1. Prominent Corrections Note',
-              content: 'When an article is updated to correct a factual error, a clear note detailing what was changed and why is appended to the top or bottom of the article with a precise timestamp.'
+              heading: '1. Prominent Corrections Box Protocol',
+              content: 'When a substantive factual error is identified in a published story, the article is corrected immediately. A clear, high-contrast Correction Note is appended to the article stating exactly what was corrected, why, and the exact timestamp of the update.'
             },
             {
-              heading: '2. Major vs Minor Clarifications',
-              content: 'Minor typographical errors are corrected quietly, while substantive changes to facts, names, or figures are explicitly highlighted in our public corrections log.'
+              heading: '2. Substantive Errors vs Typographical Edits',
+              content: 'Minor spelling or formatting fixes that do not alter the factual meaning of a story are updated silently. Any change involving names, figures, dates, quotes, or allegations requires a logged correction note.'
+            },
+            {
+              heading: '3. Public Corrections Log Archive',
+              content: 'All major corrections are compiled into a public monthly Errata Log, available for audit by media researchers, press councils, and readers.'
+            },
+            {
+              heading: '4. Reporting Errors to Editorial Desk',
+              content: 'Readers who notice a potential error are urged to contact errors@knews254.co.ke or click "Report Error" on any article page for expedited review by our desk editor.'
             }
           ]
         };
       case 'privacy-policy':
         return {
-          title: 'Privacy Policy & Data Protection',
-          updated: 'Updated July 2026 • Kenya Data Protection Act Compliant',
-          intro: `We safeguard your personal data with enterprise-grade security standards.`,
+          title: 'Privacy Policy & Data Rights (ODPC Kenya Compliant)',
+          updated: 'Updated August 2026 • Full Compliance with Kenya Data Protection Act 2019',
+          intro: `Knews254 is committed to protecting your personal data and respecting your privacy rights. This policy outlines how we collect, store, and process your information under the Data Protection Act 2019 (Office of the Data Protection Commissioner - ODPC Kenya).`,
           sections: [
             {
               heading: '1. Information We Collect',
-              content: 'We collect minimal user information necessary to deliver newsletters, save bookmarks, and provide localized news recommendations.'
+              content: 'We collect minimal personal data necessary to deliver our news services: (a) Account info (name, email), (b) Newsletter subscriptions, (c) Optional location data for county news localization, and (d) Anonymized telemetry for platform speed optimization.'
             },
             {
-              heading: '2. No Data Monetization',
-              content: 'We never sell, rent, or trade reader personal data or browsing histories to third-party ad brokers.'
+              heading: '2. Lawful Grounds for Processing',
+              content: 'We process your data strictly under valid legal grounds: user consent (subscribing to newsletters), contract performance (delivering reader features), and legitimate newsroom operational interests.'
+            },
+            {
+              heading: '3. Zero Sale of Personal Data',
+              content: 'Knews254 NEVER sells, rents, trades, or monetizes reader personal data or browsing histories to third-party ad brokers or data aggregators.'
+            },
+            {
+              heading: '4. Statutory Data Subject Rights',
+              content: 'Under the Kenya Data Protection Act 2019, you hold fundamental rights: (a) Right to access your data, (b) Right to rectification of inaccurate records, (c) Right to complete erasure ("Right to be Forgotten"), and (d) Right to object to automated profiling. Submit data requests to privacy@knews254.co.ke.'
+            },
+            {
+              heading: '5. Enterprise Security Standards',
+              content: 'All user communications, password hashes, and subscription records are encrypted using TLS 1.3 in transit and AES-256 at rest across secure cloud infrastructure.'
             }
           ]
         };
       case 'cookie-policy':
         return {
-          title: 'Cookie & Local Storage Policy',
-          updated: 'Updated July 2026',
-          intro: `Knews254 uses minimal functional cookies and browser storage to optimize reader experience.`,
+          title: 'Cookie, Analytics & Local Storage Policy',
+          updated: 'Updated August 2026 • Reader Control Standard',
+          intro: `Knews254 utilizes cookies and browser local storage to provide a seamless, customized news browsing experience without compromising your privacy.`,
           sections: [
             {
-              heading: '1. Functional Cookies',
-              content: 'Used to store active theme settings, selected county preferences, and language choices.'
+              heading: '1. Essential Functional Storage',
+              content: 'Used to store your dark/light theme preference, active 47-county filter, reading list bookmarks, and logged-in reader session states.'
             },
             {
-              heading: '2. Analytics Cookies',
-              content: 'Anonymized performance metrics used strictly to evaluate site traffic and server load.'
+              heading: '2. Analytics & Performance Cookies',
+              content: 'Anonymized session metrics enable our engineering team to monitor server response times, bandwidth distribution across Kenya, and popular news category trends.'
+            },
+            {
+              heading: '3. Managing & Clearing Storage',
+              content: 'You can modify or clear cookies at any time via your web browser settings. Note that disabling essential storage may reset your bookmarked articles and saved county preferences.'
+            },
+            {
+              heading: '4. Third-Party Embedded Content Widgets',
+              content: 'Certain news articles include embedded content (YouTube videos, Twitter/X dispatches, Infotrak polling charts). These embedded services may set independent cookies governed by their respective privacy policies.'
             }
           ]
         };
       case 'terms-of-service':
       default:
         return {
-          title: 'Terms of Service',
-          updated: 'Updated July 2026 • Knews254 Digital Media',
-          intro: `Welcome to Knews254. By accessing our platform, website, mobile apps, or API endpoints, you agree to these Terms.`,
+          title: 'Terms of Service & Reader Agreement',
+          updated: 'Updated August 2026 • Knews254 Digital Media Network',
+          intro: `Welcome to Knews254. By accessing our website, mobile application, RSS feeds, or API endpoints, you agree to comply with and be bound by these Terms of Service.`,
           sections: [
             {
-              heading: '1. Intellectual Property',
-              content: 'All published news stories, graphics, interactive visualizers, and brand marks are copyrighted property of Knews254 Media Group Ltd.'
+              heading: '1. Intellectual Property & Brand Rights',
+              content: 'All content, original reporting, audio broadcasts, custom infographics, logo marks, and code published on Knews254 are the protected intellectual property of Knews254 Media Group Ltd.'
             },
             {
-              heading: '2. Acceptable Sourcing & Fair Use',
-              content: 'Brief excerpts with direct hyperlinked attribution to Knews254 are permitted for non-commercial commentary and academic research.'
+              heading: '2. Permissible News Syndication & Fair Citation',
+              content: 'Non-commercial excerpts (up to 150 words) may be republished by academic researchers, bloggers, or news aggregators, provided clear hyperlinked attribution to Knews254.co.ke is included. Automated scraping or full-text republication without written licensing is prohibited.'
+            },
+            {
+              heading: '3. Reader Account Security & Acceptable Use',
+              content: 'Users registering accounts or using our CMS/commenting tools are responsible for maintaining credentials confidentiality. You agree not to attempt security breaches, unauthorized API calls, or platform disruption.'
+            },
+            {
+              heading: '4. Disclaimer of Warranties & High Court Jurisdiction',
+              content: 'While Knews254 strives for 100% accuracy, content is provided "as is". These terms are governed by the Laws of the Republic of Kenya, with exclusive legal jurisdiction vested in the High Court of Kenya at Nairobi.'
             }
           ]
         };
@@ -971,10 +1080,13 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
               OFFICIAL COMPLIANCE & POLICY
             </span>
             <span className="text-[10px] bg-slate-800 text-slate-300 font-bold px-2.5 py-1 rounded">
-              ISO/IEC 27001
+              MCK Accredited
+            </span>
+            <span className="text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2.5 py-1 rounded border border-emerald-800">
+              ODPC Kenya Verified
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">{policy.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-white font-serif">{policy.title}</h1>
           <p className="text-xs text-slate-400 font-mono">{policy.updated}</p>
         </div>
 
@@ -985,7 +1097,7 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
         <div className="space-y-6">
           {policy.sections.map((sec, i) => (
             <div key={i} className="space-y-2 border-b border-slate-800/60 pb-5 last:border-0">
-              <h3 className="font-extrabold text-base text-white text-red-400">{sec.heading}</h3>
+              <h3 className="font-extrabold text-base text-white text-red-400 font-serif">{sec.heading}</h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">{sec.content}</p>
             </div>
           ))}
@@ -1544,6 +1656,169 @@ const HelpSupportPage: React.FC = () => {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* INTERACTIVE HTML SITEMAP COMPONENT                                         */
+/* -------------------------------------------------------------------------- */
+const SitemapPage: React.FC<{ onSelectCategory: (cat: NewsCategory) => void }> = ({ onSelectCategory }) => {
+  const categoriesList: { name: string; cat: NewsCategory; desc: string }[] = [
+    { name: 'Breaking News & Top Stories', cat: 'breaking' as NewsCategory, desc: 'Real-time 24/7 bulletins from across Kenya and East Africa.' },
+    { name: 'Politics & Governance', cat: 'politics' as NewsCategory, desc: 'State House, National Assembly, Senate, and cabinet affairs.' },
+    { name: '2027 General Election Centre', cat: 'elections2027' as NewsCategory, desc: 'IEBC updates, presidential race tracking, voter education & polls.' },
+    { name: 'Business, Markets & NSE', cat: 'business' as NewsCategory, desc: 'Nairobi Securities Exchange, inflation, CBK interest rates, tax news.' },
+    { name: 'Silicon Savannah Technology', cat: 'technology' as NewsCategory, desc: 'Fintech, M-Pesa innovations, AI startups, and telecom updates.' },
+    { name: 'Kenya AI & Innovation Hub', cat: 'ai' as NewsCategory, desc: 'Generative AI news, research, machine learning in East Africa.' },
+    { name: 'Sports & Athletics', cat: 'sports' as NewsCategory, desc: 'KPL football, marathon champions, Rugby Sevens, Safari Rally.' },
+    { name: '47 Counties Devolution Hub', cat: 'county' as NewsCategory, desc: 'County assembly budget audits, local infrastructure, governor dispatches.' },
+    { name: 'Investigative Exposés', cat: 'investigations' as NewsCategory, desc: 'Deep investigative reports on corruption, procurement, state accountability.' },
+    { name: 'Global Kenya Diaspora', cat: 'diaspora' as NewsCategory, desc: 'Kenyans in UK, US, Gulf states, diaspora remittances and consular dispatches.' },
+    { name: 'Opinion & Editorial Columns', cat: 'opinion' as NewsCategory, desc: 'Perspectives from leading policy analysts, economists, and scholars.' },
+  ];
+
+  const portalsList: { name: string; cat: NewsCategory; desc: string }[] = [
+    { name: 'Knews254 Live TV & Radio Stream', cat: 'live' as NewsCategory, desc: 'HD live stream broadcasting breaking news and county debates.' },
+    { name: 'Video Bulletins & Documentaries', cat: 'videos' as NewsCategory, desc: 'Short video clips, ground reports, and mini-documentaries.' },
+    { name: 'Audio Podcasts & Interviews', cat: 'podcasts' as NewsCategory, desc: 'On-demand audio shows, analyst dispatches, and daily morning briefings.' },
+    { name: 'Knews254 Verify Fact-Check Unit', cat: 'fact-checking' as NewsCategory, desc: 'Forensic fact-checks debunking political myths and social media rumors.' },
+    { name: 'Ask Gemini AI Newsroom Assistant', cat: 'ai' as NewsCategory, desc: 'AI-powered instant article summarization and Q&A engine.' },
+    { name: 'Newsroom CMS Portal', cat: 'cms' as NewsCategory, desc: 'Internal editorial portal for reporter accreditation and story drafting.' },
+  ];
+
+  const standardsList: { name: string; cat: NewsCategory }[] = [
+    { name: 'Editorial Charter & Standards', cat: 'editorial-policy' as NewsCategory },
+    { name: 'Journalistic Code of Ethics', cat: 'ethics-policy' as NewsCategory },
+    { name: 'Knews254 Verify Fact-Check Method', cat: 'factcheck-methodology' as NewsCategory },
+    { name: 'Anonymous Sources & Whistleblower Shield', cat: 'anonymous-sources' as NewsCategory },
+    { name: 'Responsible AI & Tech Governance', cat: 'ai-policy' as NewsCategory },
+    { name: 'Corrections, Errata & Public Log', cat: 'corrections-policy' as NewsCategory },
+    { name: 'Ownership, Funding & Transparency', cat: 'transparency-report' as NewsCategory },
+    { name: 'Community Discussion Guidelines', cat: 'community-guidelines' as NewsCategory },
+    { name: 'Copyright & Takedown Policy (Cap 130)', cat: 'takedown-policy' as NewsCategory },
+    { name: 'Privacy Policy (ODPC Kenya Compliant)', cat: 'privacy-policy' as NewsCategory },
+    { name: 'Cookie & Local Storage Policy', cat: 'cookie-policy' as NewsCategory },
+    { name: 'Terms of Service & Reader Agreement', cat: 'terms-of-service' as NewsCategory },
+  ];
+
+  const companyList: { name: string; cat: NewsCategory }[] = [
+    { name: 'About Knews254 & Chairman Profile', cat: 'about' as NewsCategory },
+    { name: 'Editorial Board & Authors Directory', cat: 'authors' as NewsCategory },
+    { name: 'Contact Newsroom & Bureau Desks', cat: 'contact' as NewsCategory },
+    { name: 'Careers & Journalism Fellowships', cat: 'careers' as NewsCategory },
+    { name: 'Advertise & Brand Partnerships', cat: 'advertise' as NewsCategory },
+    { name: 'Reader Reviews & Community Score', cat: 'reviews' as NewsCategory },
+    { name: 'How We Review Claims & Products', cat: 'how-we-review' as NewsCategory },
+    { name: 'FAQ & Knowledge Base Centre', cat: 'faq' as NewsCategory },
+    { name: 'Help & 24/7 Technical Support', cat: 'help-center' as NewsCategory },
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4">
+      <div className="max-w-5xl mx-auto space-y-10">
+        <div className="border-b border-slate-800 pb-6 text-center space-y-3">
+          <span className="text-[10px] bg-red-600 text-white font-black px-2.5 py-1 rounded uppercase tracking-widest inline-block">
+            KNEWS254 MEDIA DIRECTORY
+          </span>
+          <h1 className="text-3xl font-black text-white font-serif">Comprehensive HTML Sitemap</h1>
+          <p className="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto">
+            Complete index of all news categories, county bureaus, specialized portals, editorial standards, and legal compliance dispatches across Knews254.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2 text-xs font-mono">
+            <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer" className="bg-slate-900 border border-slate-800 text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <Globe className="w-3.5 h-3.5" /> XML Sitemap Feed (/sitemap.xml)
+            </a>
+            <a href="/rss.xml" target="_blank" rel="noopener noreferrer" className="bg-slate-900 border border-slate-800 text-amber-400 hover:text-amber-300 px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <Globe className="w-3.5 h-3.5" /> RSS News Feed (/rss.xml)
+            </a>
+            <a href="/robots.txt" target="_blank" rel="noopener noreferrer" className="bg-slate-900 border border-slate-800 text-sky-400 hover:text-sky-300 px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <Globe className="w-3.5 h-3.5" /> Robots Directives (/robots.txt)
+            </a>
+          </div>
+        </div>
+
+        {/* Section 1: Editorial Categories */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-white font-serif flex items-center gap-2 border-b border-slate-800 pb-2">
+            <FileText className="w-5 h-5 text-red-500" /> News Categories &amp; Editorial Beats
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categoriesList.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => onSelectCategory(item.cat)}
+                className="bg-slate-900 border border-slate-800 hover:border-red-500/60 p-4 rounded-xl cursor-pointer transition group space-y-1"
+              >
+                <h3 className="font-extrabold text-sm text-white group-hover:text-red-400 flex items-center justify-between">
+                  {item.name} <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-red-400" />
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 2: Specialized Portals & Features */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-white font-serif flex items-center gap-2 border-b border-slate-800 pb-2">
+            <Sparkles className="w-5 h-5 text-amber-500" /> Specialized Media Portals &amp; Tools
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {portalsList.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => onSelectCategory(item.cat)}
+                className="bg-slate-900 border border-slate-800 hover:border-amber-500/60 p-4 rounded-xl cursor-pointer transition group space-y-1"
+              >
+                <h3 className="font-extrabold text-sm text-white group-hover:text-amber-400 flex items-center justify-between">
+                  {item.name} <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400" />
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 3: Editorial Standards & Legal Governance */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-white font-serif flex items-center gap-2 border-b border-slate-800 pb-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-500" /> Editorial Standards &amp; Legal Compliance
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {standardsList.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => onSelectCategory(item.cat)}
+                className="bg-slate-900 border border-slate-800 hover:border-emerald-500/60 p-3.5 rounded-xl cursor-pointer transition group flex items-center justify-between text-xs font-bold text-slate-200 hover:text-emerald-400"
+              >
+                <span>{item.name}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-emerald-400" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section 4: Company & Reader Services */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-black text-white font-serif flex items-center gap-2 border-b border-slate-800 pb-2">
+            <Users className="w-5 h-5 text-sky-400" /> Company, Leadership &amp; Reader Support
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {companyList.map((item, idx) => (
+              <div
+                key={idx}
+                onClick={() => onSelectCategory(item.cat)}
+                className="bg-slate-900 border border-slate-800 hover:border-sky-500/60 p-3.5 rounded-xl cursor-pointer transition group flex items-center justify-between text-xs font-bold text-slate-200 hover:text-sky-400"
+              >
+                <span>{item.name}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-600 group-hover:text-sky-400" />
+              </div>
+            ))}
           </div>
         </div>
       </div>
