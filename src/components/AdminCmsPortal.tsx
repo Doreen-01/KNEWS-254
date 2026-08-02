@@ -112,45 +112,6 @@ export const AdminCmsPortal: React.FC = () => {
       lastLogin: 'Just Now'
     },
     {
-      id: 'staff-004',
-      name: 'David Ochieng',
-      email: 'david.ochieng@knews254.co.ke',
-      role: 'Senior Financial Analyst & Markets Editor',
-      department: 'Business & Economy Desk',
-      clearanceLevel: 'LEVEL 3 EDITORIAL',
-      isChiefAdmin: false,
-      securityCode: 'DOC-112-BIZ',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
-      lastLogin: '1 hr ago'
-    },
-    {
-      id: 'staff-005',
-      name: 'Wanjiru Mwangi',
-      email: 'wanjiru.mwangi@knews254.co.ke',
-      role: 'Chief Political Correspondent',
-      department: 'Politics & Parliament Desk',
-      clearanceLevel: 'LEVEL 3 EDITORIAL',
-      isChiefAdmin: false,
-      securityCode: 'WMW-304-POL',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
-      lastLogin: '3 hrs ago'
-    },
-    {
-      id: 'staff-006',
-      name: 'Kelvin Mutua',
-      email: 'kelvin.mutua@knews254.co.ke',
-      role: 'Tech & Artificial Intelligence Lead',
-      department: 'Technology & AI Desk',
-      clearanceLevel: 'LEVEL 3 EDITORIAL',
-      isChiefAdmin: false,
-      securityCode: 'KMT-408-TECH',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
-      lastLogin: '5 hrs ago'
-    },
-    {
       id: 'staff-007',
       name: 'Alfred Mwenda',
       email: 'alfredmwenda684@gmail.com',

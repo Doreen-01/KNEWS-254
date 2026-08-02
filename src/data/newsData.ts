@@ -85,70 +85,62 @@ export const AUTHORS_LIST: Author[] = [
     location: "Nairobi HQ • Advertising & Chief Reporters Desk",
     articlesCount: 156,
     featuredBeats: ["advertising", "investigative-reporting", "breaking-news", "field-journalism", "newsroom-bureau"]
-  },
-  {
-    id: "auth-1",
-    name: "David Ochieng",
-    role: "Senior Financial Analyst & Markets Editor",
-    bio: "David covers East African monetary policy, EAC cross-border banking, securities, and treasury bond markets with 12 years experience.",
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-    email: "david.ochieng@knews254.co.ke",
-    twitter: "@OchiengMarkets",
-    location: "Nairobi HQ",
-    articlesCount: 184,
-    featuredBeats: ["business", "economy", "diaspora"]
-  },
-  {
-    id: "auth-2",
-    name: "Wanjiru Mwangi",
-    role: "Chief Political Correspondent",
-    bio: "Specialist in National Assembly legislation, IEBC electoral law audits, devolution governance, and 2027 coalition politics.",
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
-    email: "wanjiru.mwangi@knews254.co.ke",
-    twitter: "@WanjiruPoli254",
-    location: "Parliament Bureau",
-    articlesCount: 240,
-    featuredBeats: ["politics", "elections", "opinion"]
-  },
-  {
-    id: "auth-3",
-    name: "Kelvin Mutua",
-    role: "Tech & Artificial Intelligence Lead",
-    bio: "Investigating Silicon Savannah startup ecosystems, Konza Technopolis, fiber infrastructure, and African LLMs.",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-    email: "kelvin.mutua@knews254.co.ke",
-    twitter: "@MutuaTech",
-    location: "Konza & Nairobi",
-    articlesCount: 128,
-    featuredBeats: ["technology", "ai"]
-  },
-  {
-    id: "auth-4",
-    name: "Brian Otieno",
-    role: "Senior Sports & Athletics Editor",
-    bio: "Award-winning sports writer following Harambee Stars, World Athletics Diamond League, Kenya Sevens Rugby, and FKF Premier League.",
-    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-    email: "brian.otieno@knews254.co.ke",
-    twitter: "@OtienoSports",
-    location: "Eldoret & Nairobi",
-    articlesCount: 310,
-    featuredBeats: ["sports", "football", "rugby", "athletics"]
-  },
-  {
-    id: "auth-5",
-    name: "Sarah Kimani",
-    role: "Investigations & Fact-Check Director",
-    bio: "Leading Knews254 Verify unit dedicated to forensic public data verification, anti-disinformation, and investigative journalism.",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80",
-    email: "sarah.kimani@knews254.co.ke",
-    twitter: "@KimaniVerify",
-    location: "Nairobi HQ",
-    articlesCount: 195,
-    featuredBeats: ["investigations", "fact-checking", "crime"]
   }
 ];
 
 export const FEATURED_ARTICLES: Article[] = [
+  {
+    id: "art-infotrak-poll-2026",
+    title: "Infotrak Voice of the People Poll: Sifuna Surges in National Public Approval as Ruto Face Dissatisfaction Over SHIF Levies",
+    slug: "infotrak-poll-sifuna-surges-ruto-dissatisfaction-shif",
+    summary: "Latest Infotrak Research & Consulting national survey shows ODM Secretary-General Edwin Sifuna leading opposition approval metrics while public confidence in the executive faces sharp economic headwinds.",
+    content: "Nairobi, Kenya — A newly released national governance and opinion audit by Infotrak Research & Consulting has signaled major shifts in Kenya's political landscape.\n\nAccording to the poll released on state and private media networks—including live broadcasts on Citizen TV, NTV Kenya, and TV47—Nairobi Senator Edwin Sifuna has experienced a significant surge in public approval rating, polling at 42.5% among opposition figures and youth demographics across 47 counties.\n\nMeanwhile, public dissatisfaction with executive performance has risen to 62.4%, driven primarily by the transition from NHIF to the Social Health Insurance Fund (SHIF), high cost of essential commodities, and housing levy deductions. President William Ruto's confidence index stands at 27.8%, while Wiper leader Kalonzo Musyoka maintains strong regional backing at 35.8%.\n\nInfotrak Chief Executive Angela Ambitho noted during the live press briefing at Nairobi's Serena Hotel that the poll sampled 12,400 registered voters across all 47 counties with a margin of error of +/- 1.8%.",
+    category: "politics",
+    subcategory: "Opinion Polls & Research",
+    additionalCategories: ["breaking", "latest", "elections"],
+    author: {
+      id: "auth-tv47-cit",
+      name: "Media Syndication Desk (Citizen Digital & TV47)",
+      role: "Political Bureau & Data Analytics Desk",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+    },
+    publishedAt: "2026-08-02T01:15:00Z",
+    readTime: "5 min read",
+    imageUrl: "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?w=1200&auto=format&fit=crop&q=80",
+    imageCaption: "Infotrak Research poll briefing broadcast live on Citizen TV, NTV Kenya, and TV47.",
+    location: "Nairobi Serena Hotel",
+    county: "Nairobi",
+    isTrending: true,
+    isFeatured: true,
+    viewCount: 38900,
+    tags: ["Infotrak Poll", "Edwin Sifuna", "Ruto Approval", "Citizen TV", "NTV Kenya", "TV47"]
+  },
+  {
+    id: "art-media-tv47-ntv",
+    title: "Citizen TV, NTV Kenya & TV47 Joint Coverage: Parliament Debates Emergency Economic Stabilisation Bill",
+    slug: "citizen-tv-ntv-tv47-parliament-economic-bill-debate",
+    summary: "Live broadcast coverage from Parliament Buildings shows MPs across party divides pushing for immediate tax relief and audit of county funds allocation.",
+    content: "In a rare joint live broadcast across Kenya's leading television networks—Citizen TV, NTV Kenya, and TV47—lawmakers engaged in intense debate over the 2026 Economic Stabilisation & Small Business Protection Bill.\n\nSenator Edwin Sifuna and Trans Nzoia Governor George Natembeya urged the National Assembly to prioritize zero-rated agricultural inputs for coffee, maize, and tea farmers. The live coverage attracted millions of viewers streaming via YouTube, digital apps, and terrestrial television.",
+    category: "politics",
+    subcategory: "Parliamentary Debates",
+    additionalCategories: ["breaking", "latest", "business"],
+    author: {
+      id: "auth-ntv-desk",
+      name: "Knews254 Joint Newsroom (NTV & Citizen Desk)",
+      role: "Parliamentary Affairs Team",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
+    },
+    publishedAt: "2026-08-01T18:40:00Z",
+    readTime: "4 min read",
+    imageUrl: "https://images.unsplash.com/photo-1526470608268-f674ce90ebd4?w=1200&auto=format&fit=crop&q=80",
+    imageCaption: "Parliament Buildings, Nairobi during live broadcast on NTV Kenya, Citizen TV, and TV47.",
+    location: "Parliament Buildings, Nairobi",
+    county: "Nairobi",
+    isTrending: true,
+    isFeatured: true,
+    viewCount: 24100,
+    tags: ["Citizen TV", "NTV Kenya", "TV47", "Parliament", "Edwin Sifuna", "Natembeya"]
+  },
   {
     id: "art-blog-1",
     title: "The Future of Citizen Journalism in Kenya: Why Every Voice Across 47 Counties Matters",
@@ -211,10 +203,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Banking & Markets",
     additionalCategories: ["economy", "latest"],
     author: {
-      id: "auth-1",
-      name: "David Ochieng",
-      role: "Senior Financial Analyst",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+      id: "auth-ad-rep-1",
+      name: "Scholastica Karwitha",
+      role: "Advertising Manager & Chief Reporter / Chief Journalist",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T21:15:00Z",
     readTime: "4 min read",
@@ -238,10 +230,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "2027 Polls",
     additionalCategories: ["politics", "latest"],
     author: {
-      id: "auth-2",
-      name: "Wanjiru Mwangi",
-      role: "Chief Political Correspondent",
-      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
+      id: "auth-eic-1",
+      name: "Muchui Mwirigi",
+      role: "Editor-in-Chief & Community Moderator",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T19:40:00Z",
     readTime: "5 min read",
@@ -264,10 +256,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "AI & LLMs",
     additionalCategories: ["technology", "latest"],
     author: {
-      id: "auth-3",
-      name: "Kelvin Mutua",
-      role: "Tech & Innovation Lead",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
+      id: "auth-0",
+      name: "Kelly Muthomi Kinoti",
+      role: "Founder, Chairman & Super Administrator",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T18:00:00Z",
     readTime: "3 min read",
@@ -290,10 +282,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "National Team",
     additionalCategories: ["sports", "latest", "breaking"],
     author: {
-      id: "auth-4",
-      name: "Brian Otieno",
-      role: "Senior Sports Editor",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80"
+      id: "auth-ad-rep-1",
+      name: "Scholastica Karwitha",
+      role: "Advertising Manager & Chief Reporter / Chief Journalist",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T17:20:00Z",
     readTime: "4 min read",
@@ -316,10 +308,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Kenya Sevens",
     additionalCategories: ["sports", "latest"],
     author: {
-      id: "auth-4",
-      name: "Brian Otieno",
-      role: "Senior Sports Editor",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80"
+      id: "auth-ad-rep-1",
+      name: "Scholastica Karwitha",
+      role: "Advertising Manager & Chief Reporter / Chief Journalist",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T15:45:00Z",
     readTime: "3 min read",
@@ -339,10 +331,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Track & Field",
     additionalCategories: ["sports", "latest"],
     author: {
-      id: "auth-4",
-      name: "Brian Otieno",
-      role: "Senior Sports Editor",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80"
+      id: "auth-ad-rep-1",
+      name: "Scholastica Karwitha",
+      role: "Advertising Manager & Chief Reporter / Chief Journalist",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T14:10:00Z",
     readTime: "4 min read",
@@ -364,10 +356,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Music & Concerts",
     additionalCategories: ["celebrity", "lifestyle"],
     author: {
-      id: "auth-1",
-      name: "David Ochieng",
-      role: "Arts & Culture Desk",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+      id: "auth-ad-rep-1",
+      name: "Scholastica Karwitha",
+      role: "Advertising Manager & Chief Reporter / Chief Journalist",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T12:30:00Z",
     readTime: "3 min read",
@@ -388,10 +380,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Public Health",
     additionalCategories: ["lifestyle", "latest"],
     author: {
-      id: "auth-5",
-      name: "Sarah Kimani",
-      role: "Health & Social Policy Desk",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80"
+      id: "auth-support-1",
+      name: "Doreen Ngugi Nkonge",
+      role: "Customer Support Officer",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T11:00:00Z",
     readTime: "4 min read",
@@ -412,10 +404,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Cybercrime",
     additionalCategories: ["investigations", "latest"],
     author: {
-      id: "auth-5",
-      name: "Sarah Kimani",
-      role: "Investigations Director",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80"
+      id: "auth-fact-1",
+      name: "Alfred Mwenda",
+      role: "Managing Editor & Senior Fact Checker (Verification Lead)",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T09:30:00Z",
     readTime: "4 min read",
@@ -437,10 +429,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Economic Column",
     additionalCategories: ["editorials", "economy"],
     author: {
-      id: "auth-1",
-      name: "David Ochieng",
-      role: "Columnist",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
+      id: "auth-eic-1",
+      name: "Muchui Mwirigi",
+      role: "Editor-in-Chief & Community Moderator",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T08:00:00Z",
     readTime: "5 min read",
@@ -460,10 +452,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "Reforestation",
     additionalCategories: ["climate", "agriculture"],
     author: {
-      id: "auth-5",
-      name: "Sarah Kimani",
-      role: "Climate & Ecology Desk",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80"
+      id: "auth-fact-1",
+      name: "Alfred Mwenda",
+      role: "Managing Editor & Senior Fact Checker (Verification Lead)",
+      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-31T07:15:00Z",
     readTime: "3 min read",
@@ -484,10 +476,10 @@ export const FEATURED_ARTICLES: Article[] = [
     subcategory: "CBC Curriculum",
     additionalCategories: ["latest"],
     author: {
-      id: "auth-2",
-      name: "Wanjiru Mwangi",
-      role: "Education Reporter",
-      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
+      id: "auth-ad-rep-1",
+      name: "Scholastica Karwitha",
+      role: "Advertising Manager & Chief Reporter / Chief Journalist",
+      avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
     },
     publishedAt: "2026-07-30T22:00:00Z",
     readTime: "4 min read",
@@ -578,13 +570,45 @@ export const KENYA_47_COUNTIES: CountyData[] = [
 
 export const ELECTION_CANDIDATES_2027: ElectionCandidate[] = [
   {
-    id: "cand-1",
+    id: "cand-sifuna",
+    name: "Edwin Sifuna",
+    position: "Presidential",
+    party: "Orange Democratic Movement (ODM)",
+    coalition: "Azimio / Youth Reform Front",
+    pollPercentage: 42.5,
+    runningMate: "Babu Owino",
+    keyPolicies: [
+      "Public Accountability & Debt Audit Commission",
+      "Free Tertiary & Vocational Education Funding",
+      "Repeal of SHIF Levies & Return to Expanded NHIF Model",
+      "Youth Employment & Digital Hubs Protection"
+    ],
+    photoUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+  },
+  {
+    id: "cand-kalonzo",
+    name: "Stephen Kalonzo Musyoka",
+    position: "Presidential",
+    party: "Wiper Democratic Movement",
+    coalition: "United Opposition Alliance",
+    pollPercentage: 35.8,
+    runningMate: "Eugene Wamalwa",
+    keyPolicies: [
+      "24-Hour Economy Tax Incentives for Youth & SMEs",
+      "Free Tertiary Education in STEM & ICT Disciplines",
+      "Devolution Financial Allocation Increase to 35%",
+      "Zero-Tolerance Anti-Corruption Commission Overhaul"
+    ],
+    photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80"
+  },
+  {
+    id: "cand-ruto",
     name: "Dr. William Samoei Ruto",
     position: "Presidential",
     party: "United Democratic Alliance (UDA)",
     coalition: "Kenya Kwanza Coalition",
-    pollPercentage: 46.2,
-    runningMate: "Rigathi Gachagua",
+    pollPercentage: 27.8,
+    runningMate: "Professor Kithure Kindiki",
     keyPolicies: [
       "Bottom-Up Economic Transformation Model (BETA)",
       "Universal Health Coverage (SHIF System)",
@@ -594,35 +618,49 @@ export const ELECTION_CANDIDATES_2027: ElectionCandidate[] = [
     photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
   },
   {
-    id: "cand-2",
-    name: "Raila Amolo Odinga",
+    id: "cand-natembeya",
+    name: "George Natembeya",
     position: "Presidential",
-    party: "Orange Democratic Movement (ODM)",
-    coalition: "Azimio la Umoja One Kenya",
-    pollPercentage: 44.8,
-    runningMate: "Martha Karua",
+    party: "Democratic Action Party - Kenya (DAP-K)",
+    coalition: "Tawe Movement",
+    pollPercentage: 18.2,
+    runningMate: "Dr. Chris Wamalwa",
     keyPolicies: [
-      "Ksh 6,000 Monthly Social Protection Safety Net",
-      "One County One Factory Industrialisation Drive",
-      "Zero-Tolerance Anti-Corruption Commission Overhaul",
-      "Devolution Financial Allocation Increase to 35%"
+      "Western Kenya Agriculture Revitalization",
+      "Youth Employment & Direct County Enterprise Grants",
+      "Security & Border Enforcement Modernization"
+    ],
+    photoUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&auto=format&fit=crop&q=80"
+  },
+  {
+    id: "cand-gachagua",
+    name: "Rigathi Gachagua",
+    position: "Presidential",
+    party: "Democracy & Mount Kenya Alliance",
+    coalition: "DCP Regional Movement",
+    pollPercentage: 12.1,
+    runningMate: "Jeremiah Kioni",
+    keyPolicies: [
+      "Coffee & Tea Farmers Guaranteed Minimum Returns",
+      "Equitable Revenue Share (One Man, One Shilling, One Vote)",
+      "Protection of Small-Scale Traders & Gikomba Market Merchants"
     ],
     photoUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80"
   },
   {
-    id: "cand-3",
-    name: "Kalonzo Musyoka",
+    id: "cand-omtatah",
+    name: "Okiya Omtatah Okoiti",
     position: "Presidential",
-    party: "Wiper Democratic Movement",
-    coalition: "One Kenya Alliance (OKA)",
-    pollPercentage: 6.5,
-    runningMate: "Eugene Wamalwa",
+    party: "National Reconstruction Alliance (NRA)",
+    coalition: "Public Interest Defender Movement",
+    pollPercentage: 11.5,
+    runningMate: "Suba Churchill",
     keyPolicies: [
-      "24-Hour Economy Tax Incentives for Youth",
-      "Free Tertiary Education in STEM Disciplines",
-      "Diplomatic Leadership in EAC Peace Building"
+      "Constitutional Rule of Law & Public Debt Audit",
+      "Abolition of Unconstitutional Levies & Housing Deductions",
+      "Judiciary Budget Protection & Judicial Independence"
     ],
-    photoUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80"
+    photoUrl: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=300&auto=format&fit=crop&q=80"
   }
 ];
 

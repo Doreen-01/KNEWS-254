@@ -51,20 +51,22 @@ export const ElectionCentre: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Polling Chart */}
           <div className="lg:col-span-7 bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <BarChart2 className="w-4 h-4 text-red-500" />
-                National Opinion Poll Average (July 2026)
+                Infotrak National Governance & Opinion Audit (August 2026)
               </span>
-              <span className="text-[10px] font-mono text-slate-500">Sample: 12,400 Voters • MoE ±1.8%</span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                Data: Infotrak Research • Citizen TV • NTV Kenya • TV47
+              </span>
             </div>
 
-            <div className="space-y-4 pt-2">
+            <div className="space-y-3 pt-1">
               {ELECTION_CANDIDATES_2027.map((cand) => (
                 <div 
                   key={cand.id} 
                   onClick={() => setSelectedCandidate(cand)}
-                  className={`p-3.5 rounded-xl border transition cursor-pointer ${
+                  className={`p-3 rounded-xl border transition cursor-pointer ${
                     selectedCandidate.id === cand.id ? 'bg-slate-900 border-red-500/80 shadow-md' : 'bg-slate-950 hover:bg-slate-900 border-slate-800'
                   }`}
                 >
@@ -80,8 +82,11 @@ export const ElectionCentre: React.FC = () => {
                   <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden p-0.5 border border-slate-800">
                     <div 
                       className={`h-full rounded-full transition-all duration-1000 ${
-                        cand.id === 'cand-1' ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
-                        cand.id === 'cand-2' ? 'bg-gradient-to-r from-orange-600 to-red-500' : 'bg-blue-500'
+                        cand.id === 'cand-sifuna' ? 'bg-gradient-to-r from-orange-500 to-amber-400' :
+                        cand.id === 'cand-kalonzo' ? 'bg-gradient-to-r from-blue-600 to-cyan-400' :
+                        cand.id === 'cand-ruto' ? 'bg-gradient-to-r from-yellow-500 to-emerald-500' :
+                        cand.id === 'cand-natembeya' ? 'bg-gradient-to-r from-emerald-600 to-teal-400' :
+                        'bg-gradient-to-r from-red-600 to-rose-400'
                       }`} 
                       style={{ width: `${cand.pollPercentage}%` }}
                     />

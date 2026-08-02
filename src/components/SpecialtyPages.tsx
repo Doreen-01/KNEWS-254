@@ -32,11 +32,15 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
   category,
   onSelectCategory,
 }) => {
-  // Dynamic Authors list synced with localStorage
+  // Dynamic Authors list synced with localStorage (filtering removed non-staff)
   const [authorsList, setAuthorsList] = useState<Author[]>(() => {
     const saved = localStorage.getItem('knews254_authors_list');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+      try {
+        const parsed: Author[] = JSON.parse(saved);
+        const filtered = parsed.filter(a => !['David Ochieng', 'Wanjiru Mwangi', 'Kelvin Mutua', 'Brian Otieno', 'Sarah Kimani'].includes(a.name));
+        return filtered.length > 0 ? filtered : AUTHORS_LIST;
+      } catch (e) { /* fallback */ }
     }
     return AUTHORS_LIST;
   });
@@ -46,7 +50,11 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
     const handleStorage = () => {
       const saved = localStorage.getItem('knews254_authors_list');
       if (saved) {
-        try { setAuthorsList(JSON.parse(saved)); } catch (e) {}
+        try {
+          const parsed: Author[] = JSON.parse(saved);
+          const filtered = parsed.filter(a => !['David Ochieng', 'Wanjiru Mwangi', 'Kelvin Mutua', 'Brian Otieno', 'Sarah Kimani'].includes(a.name));
+          setAuthorsList(filtered.length > 0 ? filtered : AUTHORS_LIST);
+        } catch (e) {}
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -265,26 +273,49 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
   if (category === 'about') {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <div className="border-b border-slate-800 pb-6 text-center space-y-2">
-            <span className="text-[10px] bg-red-600 text-white font-black px-2.5 py-1 rounded uppercase tracking-widest inline-block">
-              ABOUT KNEWS254
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-black text-white">Kenya's Premier Digital Media House</h1>
-            <p className="text-slate-400 text-sm max-w-xl mx-auto">
-              Built on fast, independent, verified journalism across all 47 counties, East Africa, and global diaspora networks.
+        <div className="max-w-5xl mx-auto space-y-10">
+          {/* Header Banner */}
+          <div className="border-b border-slate-800 pb-8 text-center space-y-3 relative overflow-hidden">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-rose-700 text-white text-[10px] font-mono font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg">
+              <Sparkles className="w-3.5 h-3.5" /> ABOUT KNEWS254 MEDIA GROUP
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight font-serif">
+              Kenya's Premier Digital News &amp; Data Enterprise
+            </h1>
+            <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+              Empowering 47 counties with uncompromised, verified, fast-breaking journalism, live electoral tracking, and deep analytical reporting.
             </p>
+
+            {/* Live Metrics Counter */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 max-w-3xl mx-auto">
+              <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5 shadow-md">
+                <span className="text-xl font-black text-red-500 font-mono">47 / 47</span>
+                <p className="text-[11px] font-bold text-slate-300">County Bureaus</p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5 shadow-md">
+                <span className="text-xl font-black text-emerald-400 font-mono">24 / 7</span>
+                <p className="text-[11px] font-bold text-slate-300">Live Newsroom Desk</p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5 shadow-md">
+                <span className="text-xl font-black text-amber-400 font-mono">100%</span>
+                <p className="text-[11px] font-bold text-slate-300">Editorial Independence</p>
+              </div>
+              <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl text-center space-y-0.5 shadow-md">
+                <span className="text-xl font-black text-sky-400 font-mono">Verified</span>
+                <p className="text-[11px] font-bold text-slate-300">Infotrak & Media Feeds</p>
+              </div>
+            </div>
           </div>
 
           {/* Founder & Chairman Spotlight Profile: Kelly Muthomi Kinoti */}
           <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-red-950/40 border-2 border-red-600/60 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden">
             <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-mono font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-md">
-              FOUNDER & CHAIRMAN SPOTLIGHT
+              FOUNDER &amp; CHAIRMAN SPOTLIGHT
             </div>
 
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6 pt-2">
-              <div className="relative shrink-0 w-48 sm:w-56 shadow-2xl rounded-2xl overflow-hidden border-2 border-emerald-500/50">
-                <KmkLogo variant="card" showName={false} className="w-full bg-white p-3" />
+              <div className="relative shrink-0 w-48 sm:w-56 shadow-2xl rounded-2xl overflow-hidden border-2 border-emerald-500/50 bg-white">
+                <KmkLogo variant="card" showName={false} className="w-full bg-white p-4" />
                 <span className="absolute bottom-2 right-2 bg-emerald-500 text-slate-950 font-black text-[9px] font-mono px-2 py-0.5 rounded-full border border-slate-950 shadow-md">
                   SUPER ADMIN
                 </span>
@@ -296,61 +327,66 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
                     Kelly Muthomi Kinoti
                   </h2>
                   <p className="text-xs sm:text-sm font-bold text-red-400 mt-0.5">
-                    Creator, Chairman & Super Administrator • Knews254 Media Group
+                    Creator, Chairman &amp; Super Administrator • Knews254 Media Group
                   </p>
-                  <p className="text-[11px] text-slate-400 font-mono mt-1">
-                    Nairobi, Kenya • Educator • Lead Full-Stack Architect & Data Researcher
+                  <p className="text-[11px] text-slate-300 font-mono mt-1">
+                    Nairobi, Kenya • Educator • Lead Full-Stack Architect &amp; Data Researcher
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1">
-                  <span className="bg-slate-950 border border-slate-800 text-slate-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg">
-                    Mathematics & Business Education (Moi University)
+                  <span className="bg-slate-950 border border-slate-800 text-slate-200 text-[10px] font-mono font-bold px-3 py-1 rounded-lg">
+                    Mathematics &amp; Business Education (Moi University)
                   </span>
-                  <span className="bg-slate-950 border border-slate-800 text-emerald-400 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg">
+                  <span className="bg-slate-950 border border-slate-800 text-emerald-400 text-[10px] font-mono font-bold px-3 py-1 rounded-lg">
                     Full-Stack Web Engineering
                   </span>
-                  <span className="bg-slate-950 border border-slate-800 text-amber-400 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg">
+                  <span className="bg-slate-950 border border-slate-800 text-amber-400 text-[10px] font-mono font-bold px-3 py-1 rounded-lg">
                     Quantitative Data Analytics
                   </span>
+                </div>
+
+                {/* Founder Vision Callout Quote */}
+                <div className="bg-slate-950/90 border-l-4 border-red-500 p-3 rounded-r-xl text-xs text-slate-300 italic">
+                  "Our vision for Knews254 is to build a sovereign digital newsroom that pairs grassroots investigative journalism across all 47 counties with cutting-edge analytical speed and unyielding truth."
                 </div>
               </div>
             </div>
 
-            {/* Narrative About Me (Not a resume) */}
+            {/* Detailed Narrative Biography */}
             <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 sm:p-6 space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
               <h3 className="text-base font-black text-white border-b border-slate-800/80 pb-2.5 font-serif flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-red-500" /> About the Founder
+                <Sparkles className="w-4 h-4 text-red-500" /> Executive Biography &amp; Technical Vision
               </h3>
               <p>
                 <strong className="text-white">Kelly Muthomi Kinoti</strong> is a forward-thinking educator, software developer, and analytical researcher dedicated to bridging technology, educational empowerment, and digital transformation across Kenya and East Africa. As the founder and Chairman of <strong className="text-red-400">Knews254</strong>, Kelly conceptualized and built this enterprise media ecosystem to provide citizens with fast, verified, and unbiased news across all 47 counties.
               </p>
               <p>
-                Holding a Bachelor of Arts in Education (Business Studies & Mathematics) from Moi University, Kelly combines over six years of educational leadership with deep expertise in software engineering and data analytics. His background spans full-stack software development, database design, REST API architecture, statistical modeling (SPSS, SAS, STATA), and AI-assisted application building.
+                Holding a Bachelor of Arts in Education (Business Studies &amp; Mathematics) from Moi University, Kelly combines over six years of educational leadership with deep expertise in software engineering and data analytics. His background spans full-stack software development, database design, REST API architecture, statistical modeling (SPSS, SAS, STATA), and AI-assisted application building.
               </p>
               <p>
                 Through Knews254 and independent technical ventures such as <strong className="text-slate-200">StyledKid</strong> and <strong className="text-slate-200">WildLens Adventure</strong>, Kelly continues to champion digital literacy, data-driven journalism, and cutting-edge web infrastructure, shaping the future of digital media and technology integration in East Africa.
               </p>
 
-              <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-400">
+              <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-4 text-xs font-mono text-slate-300">
                 <div className="flex flex-wrap items-center gap-4">
-                  <span>Email: <strong className="text-slate-200">kellymuthomi22@gmail.com</strong></span>
-                  <span>Direct: <strong className="text-slate-200">+254 708 220 323</strong></span>
+                  <span>Email: <strong className="text-slate-100">kellymuthomi22@gmail.com</strong></span>
+                  <span>Direct Desk: <strong className="text-slate-100">+254 708 220 323</strong></span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <a
                     href="https://kelly-muthomi-kinoti.vercel.app/"
                     target="_blank"
                     rel="noreferrer"
-                    className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-3 py-1.5 rounded-xl text-xs font-sans inline-flex items-center gap-1.5 transition shadow-lg"
+                    className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-3.5 py-1.5 rounded-xl text-xs font-sans inline-flex items-center gap-1.5 transition shadow-lg"
                   >
                     <Globe className="w-3.5 h-3.5" /> Official Portfolio <ExternalLink className="w-3 h-3" />
                   </a>
-                  <a href="https://styledkid.co.ke" target="_blank" rel="noreferrer" className="text-red-400 hover:underline flex items-center gap-1">
+                  <a href="https://styledkid.co.ke" target="_blank" rel="noreferrer" className="text-red-400 hover:underline flex items-center gap-1 font-bold">
                     StyledKid <ExternalLink className="w-3 h-3" />
                   </a>
                   <span>•</span>
-                  <a href="https://wildlensadventure.com" target="_blank" rel="noreferrer" className="text-red-400 hover:underline flex items-center gap-1">
+                  <a href="https://wildlensadventure.com" target="_blank" rel="noreferrer" className="text-red-400 hover:underline flex items-center gap-1 font-bold">
                     WildLens Adventure <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -358,21 +394,32 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center space-y-2">
-              <Award className="w-8 h-8 text-red-500 mx-auto" />
-              <h3 className="font-extrabold text-sm text-white">47 County Bureaus</h3>
-              <p className="text-xs text-slate-400">Direct correspondents on the ground across every county.</p>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center space-y-2">
-              <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
-              <h3 className="font-extrabold text-sm text-white">Forensic Verification</h3>
-              <p className="text-xs text-slate-400">Dedicated Knews254 Verify unit combating viral misinformation.</p>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center space-y-2">
-              <Sparkles className="w-8 h-8 text-amber-500 mx-auto" />
-              <h3 className="font-extrabold text-sm text-white">AI &amp; Supabase Innovation</h3>
-              <p className="text-xs text-slate-400">Integrated server-side Gemini AI &amp; Supabase Cloud Storage for verified news media.</p>
+          {/* Core Institutional Pillars */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-black text-white font-serif flex items-center gap-2">
+              <Award className="w-5 h-5 text-red-500" /> Four Pillars of Knews254 Media
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2 hover:border-red-500/50 transition">
+                <MapPin className="w-7 h-7 text-red-500" />
+                <h3 className="font-extrabold text-sm text-white">47 County Bureaus</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">Direct correspondents and citizen reporters active in all 47 counties of Kenya.</p>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2 hover:border-emerald-500/50 transition">
+                <ShieldCheck className="w-7 h-7 text-emerald-500" />
+                <h3 className="font-extrabold text-sm text-white">Forensic Verification</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">Dedicated Knews254 Verify unit auditing claims and debunking viral misinformation.</p>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2 hover:border-sky-500/50 transition">
+                <Users className="w-7 h-7 text-sky-400" />
+                <h3 className="font-extrabold text-sm text-white">Media Syndication</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">Cross-referenced reports with Citizen TV, NTV Kenya, TV47, and Infotrak opinion polls.</p>
+              </div>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2 hover:border-amber-500/50 transition">
+                <Sparkles className="w-7 h-7 text-amber-500" />
+                <h3 className="font-extrabold text-sm text-white">AI &amp; Data Engine</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">Server-side Gemini AI summarization and quantitative polls visualizer.</p>
+              </div>
             </div>
           </div>
 
@@ -381,13 +428,13 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
               <div>
                 <span className="text-[10px] bg-red-600/90 text-white font-black px-2.5 py-0.5 rounded uppercase tracking-widest inline-block mb-1">
-                  KNEWS254 EDITORIAL TEAM
+                  KNEWS254 EDITORIAL BOARD
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black text-white font-serif">
-                  Journalists, Editors &amp; Correspondents
+                  Verified Newsroom Leadership &amp; Key Staff
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Our team of dedicated reporters across East Africa. Staff can edit their profile data and images in the CMS.
+                  Meet the key journalists and editorial officers driving Knews254.
                 </p>
               </div>
 
@@ -395,7 +442,7 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
                 onClick={() => onSelectCategory('cms' as NewsCategory)}
                 className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition inline-flex items-center gap-2 cursor-pointer shrink-0"
               >
-                <UserCheck className="w-4 h-4" /> Edit Profile &amp; Upload Images
+                <UserCheck className="w-4 h-4" /> Editorial CMS Portal
               </button>
             </div>
 
@@ -404,7 +451,7 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
                 <div
                   key={author.id}
                   onClick={() => setSelectedAuthor(author)}
-                  className="bg-slate-950/80 border border-slate-800 hover:border-red-500/60 p-4 rounded-2xl transition cursor-pointer flex items-start gap-4 group"
+                  className="bg-slate-950/80 border border-slate-800 hover:border-red-500/60 p-4 rounded-2xl transition cursor-pointer flex items-start gap-4 group shadow-md"
                 >
                   <img
                     src={author.avatar}
@@ -438,14 +485,44 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
             </div>
           </div>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 space-y-4 leading-relaxed text-sm text-slate-300">
-            <h2 className="text-xl font-bold text-white">Our Editorial Mission</h2>
-            <p>
-              Founded in Nairobi, Knews254 was created to serve the modern East African reader with uncompromising integrity, speed, and analytical depth. We operate free from political or commercial bias, upholding strict editorial independence.
-            </p>
-            <p>
-              Our newsroom leverages cutting-edge web infrastructure, real-time data visualizers, and interactive civic tools to empower citizens ahead of the 2027 General Election and beyond.
-            </p>
+          {/* Editorial Mission & Code of Integrity */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 leading-relaxed text-sm text-slate-300">
+              <h2 className="text-xl font-black text-white font-serif flex items-center gap-2">
+                <FileText className="w-5 h-5 text-red-500" /> Editorial Charter
+              </h2>
+              <p>
+                Founded in Nairobi, <strong className="text-white">Knews254</strong> operates under a strict code of editorial integrity. We prioritize field reporting from county correspondents and verified public records.
+              </p>
+              <p>
+                Our newsroom remains entirely non-partisan, independent of political influence, and dedicated to upholding accountability for public institutions.
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-4 text-sm text-slate-300">
+              <h2 className="text-xl font-black text-white font-serif flex items-center gap-2">
+                <Phone className="w-5 h-5 text-emerald-400" /> Direct Desk &amp; News Tips
+              </h2>
+              <p className="text-xs text-slate-400">
+                Have breaking news, confidential documents, or whistleblower details? Connect with our duty editor directly on WhatsApp or Email.
+              </p>
+              <div className="space-y-2.5 pt-2">
+                <a
+                  href="https://wa.me/254711837011?text=Hello%20Knews254%20Newsroom,%20I%20have%20a%20breaking%20news%20tip/inquiry:"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Phone className="w-4 h-4" /> Open 24/7 WhatsApp Newsroom Chat
+                </a>
+                <a
+                  href="mailto:knews254ke@gmail.com"
+                  className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 border border-slate-700"
+                >
+                  <Mail className="w-4 h-4 text-amber-400" /> Email: knews254ke@gmail.com
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>

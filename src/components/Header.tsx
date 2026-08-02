@@ -69,11 +69,13 @@ export const Header: React.FC<HeaderProps> = ({
   const [showSavedNotification, setShowSavedNotification] = useState(false);
 
   const breakingNewsHeadlines = [
-    'CBK Monetary Policy Committee maintains CBR at 12.0% amid stable shilling',
-    'IEBC announces voter verification drive across 47 counties for 2027 polls',
-    'Harambee Stars defeat Uganda 2-0 to advance to CHAN Quarter-Finals',
-    'Kenya signs $450M green energy grid expansion agreement in Nairobi summit',
-    'Silicon Savannah: Nairobi AI startup hub secures $30M Series B funding'
+    'Infotrak Governance Audit: Edwin Sifuna approval surges to 42.5% as public tracks SHIF & economic policy debates',
+    'Parliament Live Desk: Lawmakers demand urgent tax relief & SME protection in 2026 Emergency Finance Bill',
+    'Treasury & CBK Report: Kenya Shilling holds steady at 128.40 vs US Dollar amid strong tea & coffee exports',
+    'Ministry of Health & SHIF Review Board hold national public participation forums across all 47 counties',
+    'IEBC & Media Council announce joint press guidelines & digital reporter accreditation for 2027 General Election',
+    'Ministry of Energy commissions 220MW green geothermal grid expansion in Naivasha Olkaria complex',
+    'High Court issues temporary conservancy order on regional agricultural tax framework pending bench ruling'
   ];
 
   // Rotate ticker every 6 seconds
@@ -216,18 +218,25 @@ export const Header: React.FC<HeaderProps> = ({
       {/* 1. TOP GLOBAL INTELLIGENCE & MARKETS STRIP */}
       <div className="bg-slate-900/90 px-4 py-1.5 text-xs border-b border-slate-800/80">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          {/* Live Breaking News Ticker with Rotating Headlines */}
-          <div className="flex items-center gap-2 overflow-hidden max-w-2xl">
-            <span className="bg-red-600 text-white font-black px-2 py-0.5 rounded text-[10px] tracking-widest uppercase flex items-center gap-1 shrink-0 shadow-sm">
+          {/* Live Breaking News Continuous Flow Ticker */}
+          <div className="flex items-center gap-2 overflow-hidden flex-1 max-w-2xl lg:max-w-3xl">
+            <span className="bg-red-600 text-white font-black px-2 py-0.5 rounded text-[10px] tracking-widest uppercase flex items-center gap-1 shrink-0 shadow-sm z-10">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
               BREAKING
             </span>
-            <p className="text-slate-200 truncate font-medium text-xs animate-fadeIn key={tickerIndex}">
-              {breakingNewsHeadlines[tickerIndex]}
-            </p>
+            <div className="overflow-hidden whitespace-nowrap relative flex-1 cursor-default">
+              <div className="animate-marquee flex items-center gap-8">
+                {[...breakingNewsHeadlines, ...breakingNewsHeadlines].map((headline, idx) => (
+                  <span key={idx} className="inline-flex items-center gap-3 text-slate-200 text-xs font-medium hover:text-white transition">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block shrink-0" />
+                    <span>{headline}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
             <button 
               onClick={() => setTickerMuted(!tickerMuted)} 
-              className="text-slate-400 hover:text-white transition shrink-0 ml-1"
+              className="text-slate-400 hover:text-white transition shrink-0 ml-1 z-10"
               title="Toggle audio alerts"
             >
               {tickerMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-red-400" />}
