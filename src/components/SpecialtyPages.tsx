@@ -74,13 +74,31 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
   // Active Author Detail
   const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!contactData.name || !contactData.email || !contactData.message) return;
+
+    try {
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: contactData.name,
+          email: contactData.email,
+          subject: contactData.subject || 'Website General Contact',
+          message: contactData.message,
+          type: 'General Contact'
+        })
+      });
+    } catch (err) {
+      console.warn('Backend contact notice:', err);
+    }
+
     setContactSubmitted(true);
     setTimeout(() => {
       setContactSubmitted(false);
       setContactData({ name: '', email: '', subject: '', message: '' });
-    }, 5000);
+    }, 6000);
   };
 
   // Render Authors Page

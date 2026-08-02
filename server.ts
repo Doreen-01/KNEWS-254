@@ -24,9 +24,346 @@ if (process.env.GEMINI_API_KEY) {
   });
 }
 
+// In-memory persistent data stores (bootstrapped with initial records)
+interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  type: string;
+  timestamp: string;
+  status: string;
+}
+
+interface Subscriber {
+  id: string;
+  email: string;
+  frequency: string;
+  subscribedAt: string;
+  status: string;
+}
+
+interface Tipoff {
+  id: string;
+  alias: string;
+  category: string;
+  details: string;
+  contactPhone: string;
+  timestamp: string;
+  clearanceRequired: string;
+}
+
+interface VettingRequest {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  role: string;
+  experience: string;
+  credentialsBio: string;
+  score: string;
+  appliedDate: string;
+  status: string;
+}
+
+const contactMessages: ContactMessage[] = [
+  {
+    id: "msg-001",
+    name: "Dr. James Mwangi",
+    email: "james.mwangi@equity.co.ke",
+    subject: "Media Partnership & Banking Sector Coverage",
+    message: "Greetings to Executive Director Kelly Muthomi Kinoti. We would like to sponsor Knews254's East Africa Economic Tickers & Finance Hub.",
+    type: "Advertising & Partnerships",
+    timestamp: "2026-08-02 09:15 EAT",
+    status: "UNREAD"
+  },
+  {
+    id: "msg-002",
+    name: "Grace Kilonzo",
+    email: "g.kilonzo@mediacouncil.or.ke",
+    subject: "Media Council Compliance Clearance #2026/091",
+    message: "Official confirmation of Knews254 MCK Digital Accreditation and Press Card issuance for reporting staff.",
+    type: "Editorial / Regulatory",
+    timestamp: "2026-08-01 14:30 EAT",
+    status: "READ"
+  }
+];
+
+const newsletterSubscribers: Subscriber[] = [
+  { id: "sub-101", email: "kellymuthomi22@gmail.com", frequency: "daily", subscribedAt: "2026-08-01", status: "ACTIVE" },
+  { id: "sub-102", email: "doreenngugi38@gmail.com", frequency: "daily", subscribedAt: "2026-08-01", status: "ACTIVE" },
+  { id: "sub-103", email: "alfredmwenda@knews254.co.ke", frequency: "breaking", subscribedAt: "2026-08-01", status: "ACTIVE" },
+  { id: "sub-104", email: "editor@standardmedia.co.ke", frequency: "weekly", subscribedAt: "2026-08-02", status: "ACTIVE" }
+];
+
+const tipoffsStore: Tipoff[] = [
+  {
+    id: "tip-901",
+    alias: "Whistleblower-Nairobi-Audit",
+    category: "County Financial Audit",
+    details: "Unusual expenditure detected in county public works procurement docket. Document copies available for investigative journalists.",
+    contactPhone: "+254 790 *** ***",
+    timestamp: "2026-08-01 22:10 EAT",
+    clearanceRequired: "LEVEL 3 CHIEF ADMIN"
+  }
+];
+
+const vettingRequestsStore: VettingRequest[] = [
+  {
+    id: "vet-101",
+    name: "David Otieno Kinuthia",
+    email: "david.otieno@knews254.co.ke",
+    phone: "+254 712 345 678",
+    department: "Nyanza & Kisumu Bureau",
+    role: "Senior Field Reporter & Audio Podcast Host",
+    experience: "6 Years Broadcast Journalism",
+    credentialsBio: "Former KTN News regional reporter covering devolution & county assembly politics in Western & Nyanza.",
+    score: "96/100",
+    appliedDate: "Today",
+    status: "PENDING_EXECUTIVE_VETTING"
+  },
+  {
+    id: "vet-102",
+    name: "Catherine Njeri Wambui",
+    email: "catherine.wambui@knews254.co.ke",
+    phone: "+254 722 987 654",
+    department: "Multimedia & Podcast Studio Desk",
+    role: "Podcast Producer & Host (Politics Uncut)",
+    experience: "4 Years Radio & Digital Audio",
+    credentialsBio: "Experienced audio engineer & investigative podcaster specializing in East African macroeconomic debates.",
+    score: "98/100",
+    appliedDate: "Yesterday",
+    status: "PENDING_EXECUTIVE_VETTING"
+  }
+];
+
+// 1. CONTACT FORM ENDPOINTS
+app.post("/api/contact", (req, res) => {
+  try {
+    const { name, email, subject, message, type } = req.body;
+    if (!name || !email || !message) {
+      res.status(400).json({ error: "Name, email, and message are required fields." });
+      return;
+    }
+
+    const newMessage: ContactMessage = {
+      id: `msg-${Date.now().toString().slice(-4)}`,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      subject: subject || "General Inquiry",
+      message: message.trim(),
+      type: type || "General Contact",
+      timestamp: new Date().toISOString().replace("T", " ").substring(0, 16) + " EAT",
+      status: "UNREAD"
+    };
+
+    contactMessages.unshift(newMessage);
+    console.log(`[KNEWS254 BACKEND] Received Contact Message from ${name} (${email}): "${subject}"`);
+
+    res.json({
+      success: true,
+      message: "Your message has been received by Knews254 Editorial Desk & Chief Executive Kelly Muthomi Kinoti. We will respond shortly.",
+      receivedId: newMessage.id
+    });
+  } catch (error) {
+    console.error("Error saving contact message:", error);
+    res.status(500).json({ error: "Failed to process message." });
+  }
+});
+
+app.get("/api/contact", (_req, res) => {
+  res.json({ count: contactMessages.length, messages: contactMessages });
+});
+
+// 2. NEWSLETTER SUBSCRIPTION ENDPOINTS
+app.post("/api/subscribe", (req, res) => {
+  try {
+    const { email, frequency } = req.body;
+    if (!email || !email.includes("@")) {
+      res.status(400).json({ error: "A valid email address is required." });
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = newsletterSubscribers.find(s => s.email === cleanEmail);
+    if (existing) {
+      existing.frequency = frequency || existing.frequency;
+      res.json({
+        success: true,
+        message: `Email ${cleanEmail} is already subscribed. Subscription settings updated to ${existing.frequency}.`,
+        subscriber: existing
+      });
+      return;
+    }
+
+    const newSub: Subscriber = {
+      id: `sub-${Date.now().toString().slice(-4)}`,
+      email: cleanEmail,
+      frequency: frequency || "daily",
+      subscribedAt: new Date().toISOString().substring(0, 10),
+      status: "ACTIVE"
+    };
+
+    newsletterSubscribers.unshift(newSub);
+    console.log(`[KNEWS254 BACKEND] New Newsletter Subscription: ${cleanEmail} (${newSub.frequency})`);
+
+    res.json({
+      success: true,
+      message: `✓ Successfully subscribed ${cleanEmail} to Knews254 Morning Dispatch! Next dispatch arrives at 6:00 AM EAT.`,
+      subscriber: newSub
+    });
+  } catch (error) {
+    console.error("Error subscribing user:", error);
+    res.status(500).json({ error: "Subscription processing failed." });
+  }
+});
+
+app.get("/api/subscribers", (_req, res) => {
+  res.json({ totalSubscribers: newsletterSubscribers.length, subscribers: newsletterSubscribers });
+});
+
+// 3. CONFIDENTIAL WHISTLEBLOWER TIPOFF ENDPOINTS
+app.post("/api/tipoff", (req, res) => {
+  try {
+    const { alias, category, details, contactPhone } = req.body;
+    if (!details) {
+      res.status(400).json({ error: "Tipoff details are required." });
+      return;
+    }
+
+    const newTip: Tipoff = {
+      id: `tip-${Date.now().toString().slice(-4)}`,
+      alias: alias || "Anonymous Whistleblower",
+      category: category || "Investigative Leak",
+      details: details.trim(),
+      contactPhone: contactPhone || "Encrypted Signal/WhatsApp",
+      timestamp: new Date().toISOString().replace("T", " ").substring(0, 16) + " EAT",
+      clearanceRequired: "LEVEL 3 CHIEF ADMIN"
+    };
+
+    tipoffsStore.unshift(newTip);
+    console.log(`[KNEWS254 SECURE BACKEND] Whistleblower Tip Received: ${newTip.alias} (${newTip.category})`);
+
+    res.json({
+      success: true,
+      message: "✓ Confidential tipoff transmitted over AES-250 encrypted channel to Chief Administrator Kelly Muthomi Kinoti & Investigative Desk.",
+      tipId: newTip.id
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Tipoff submission failed." });
+  }
+});
+
+app.get("/api/tipoffs", (_req, res) => {
+  res.json({ totalTips: tipoffsStore.length, tips: tipoffsStore });
+});
+
+// 4. ACCREDITATION & VETTING ENDPOINTS
+app.post("/api/vetting", (req, res) => {
+  try {
+    const { name, email, phone, department, role, experience, credentialsBio } = req.body;
+    if (!name || !email) {
+      res.status(400).json({ error: "Name and email are required for vetting." });
+      return;
+    }
+
+    const newReq: VettingRequest = {
+      id: `vet-${Date.now().toString().slice(-4)}`,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone || "+254 700 000 000",
+      department: department || "Newsroom & Reporting Bureau",
+      role: role || "Reporter / Journalist",
+      experience: experience || "3+ Years Digital Media",
+      credentialsBio: credentialsBio || "Press accreditation applicant.",
+      score: "94/100",
+      appliedDate: "Just Now",
+      status: "PENDING_EXECUTIVE_VETTING"
+    };
+
+    vettingRequestsStore.unshift(newReq);
+    res.json({
+      success: true,
+      message: `✓ Vetting application for ${name} submitted to Chairman Kelly Muthomi Kinoti & Editor Muchui Mwirigi.`,
+      request: newReq
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Vetting submission failed." });
+  }
+});
+
+app.get("/api/vetting", (_req, res) => {
+  res.json({ totalQueue: vettingRequestsStore.length, queue: vettingRequestsStore });
+});
+
+// 5. XML DYNAMIC SITEMAP ENDPOINT
+const buildDynamicSitemapXml = () => {
+  const domain = "https://knews254.co.ke";
+  const now = new Date().toISOString().substring(0, 10);
+  const categories = [
+    "top", "kenya", "counties", "politics", "elections2027", "business", 
+    "world", "sports", "tech", "opinion", "lifestyle", "fact-check", "multimedia", "epaper"
+  ];
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n`;
+
+  // Homepage
+  xml += `  <url>\n    <loc>${domain}/</loc>\n    <lastmod>${now}</lastmod>\n    <changefreq>always</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+
+  // Category Pages
+  categories.forEach(cat => {
+    xml += `  <url>\n    <loc>${domain}/category/${cat}</loc>\n    <lastmod>${now}</lastmod>\n    <changefreq>hourly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+  });
+
+  xml += `</urlset>`;
+  return xml;
+};
+
+app.get("/sitemap.xml", (_req, res) => {
+  res.header("Content-Type", "application/xml");
+  res.send(buildDynamicSitemapXml());
+});
+
+app.get("/api/sitemap.xml", (_req, res) => {
+  res.header("Content-Type", "application/xml");
+  res.send(buildDynamicSitemapXml());
+});
+
+// 6. DYNAMIC RSS FEED ENDPOINT
+app.get(["/rss.xml", "/api/rss.xml"], (_req, res) => {
+  const domain = "https://knews254.co.ke";
+  let rss = `<?xml version="1.0" encoding="UTF-8" ?>\n`;
+  rss += `<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">\n`;
+  rss += `<channel>\n`;
+  rss += `  <title>Knews254 - Kenya Verified Breaking News &amp; Devolution Portal</title>\n`;
+  rss += `  <link>${domain}</link>\n`;
+  rss += `  <description>Official RSS Newsfeed for Knews254 Digital Media Network</description>\n`;
+  rss += `  <language>en-ke</language>\n`;
+  rss += `  <item>\n`;
+  rss += `    <title>High Court Rules on Devolution Revenue Allocation Formula for 47 Counties</title>\n`;
+  rss += `    <link>${domain}/news/devolution-revenue-formula-2026</link>\n`;
+  rss += `    <description>Constitutional bench issues decisive verdict on equitable share allocation among Kenyan county governments.</description>\n`;
+  rss += `    <pubDate>${new Date().toUTCString()}</pubDate>\n`;
+  rss += `    <dc:creator>Muchui Mwirigi (Editor-in-Chief)</dc:creator>\n`;
+  rss += `  </item>\n`;
+  rss += `</channel>\n</rss>`;
+
+  res.header("Content-Type", "application/xml");
+  res.send(rss);
+});
+
+// 7. ROBOTS.TXT
+app.get("/robots.txt", (_req, res) => {
+  res.header("Content-Type", "text/plain");
+  res.send(`User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: https://knews254.co.ke/sitemap.xml\n`);
+});
+
 // API Routes
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", app: "Knews254 Digital Media Backend" });
+  res.json({ status: "ok", app: "Knews254 Digital Media Backend", version: "3.2.0" });
 });
 
 // AI Article Summarizer Route

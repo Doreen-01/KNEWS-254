@@ -223,7 +223,7 @@ export const AdminCmsPortal: React.FC = () => {
     credentialsBio: ''
   });
 
-  const handleApplyVetting = (e: React.FormEvent) => {
+  const handleApplyVetting = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vettingForm.name.trim() || !vettingForm.email.trim()) return;
 
@@ -240,6 +240,16 @@ export const AdminCmsPortal: React.FC = () => {
       appliedDate: 'Just Now',
       status: 'PENDING_EXECUTIVE_VETTING'
     };
+
+    try {
+      await fetch('/api/vetting', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRequest)
+      });
+    } catch (err) {
+      console.warn('Backend vetting notice:', err);
+    }
 
     const updatedQueue = [newRequest, ...vettingQueue];
     setVettingQueue(updatedQueue);

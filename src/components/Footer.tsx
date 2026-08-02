@@ -66,11 +66,22 @@ export const Footer: React.FC<FooterProps> = ({
     }
   };
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    
+    try {
+      await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), frequency })
+      });
+    } catch (err) {
+      console.warn('Backend subscribe notice:', err);
+    }
+
     setSubscribed(true);
-    setTimeout(() => setSubscribed(false), 5000);
+    setTimeout(() => setSubscribed(false), 6000);
     setEmail('');
   };
 
@@ -494,21 +505,66 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Middle Bar: Mobile Apps & Global Bureaus */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-red-950/80 border border-red-800/80 flex items-center justify-center shrink-0">
-              <Smartphone className="w-5 h-5 text-red-500" />
+            {/* Registered KNEWS254 Favicon / Official App Icon Emblem */}
+            <div className="w-12 h-12 rounded-2xl bg-slate-900 border-2 border-slate-700 flex items-center justify-center relative overflow-hidden shadow-xl shrink-0">
+              <span className="font-black text-2xl text-white tracking-tighter font-serif">K</span>
+              <div className="absolute bottom-0 inset-x-0 h-2 flex">
+                <div className="w-1/3 bg-slate-950" />
+                <div className="w-1/3 bg-red-600" />
+                <div className="w-1/3 bg-emerald-600" />
+              </div>
             </div>
             <div>
-              <p className="font-bold text-white text-xs">Download Knews254 Mobile Apps</p>
-              <p className="text-[11px] text-slate-400">Offline reading, election push notifications, and audio reader for iOS & Android.</p>
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-white text-xs font-serif">Download Official Knews254 Mobile App</p>
+                <span className="text-[9px] bg-red-950 text-red-400 font-mono font-bold px-2 py-0.5 rounded border border-red-800 uppercase">
+                  v3.2 Official Icon
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Featuring our official newsroom logo favicon emblem. Offline reading, election alerts &amp; live podcasts.
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <span className="bg-slate-950 border border-slate-800 text-slate-300 font-bold text-[10px] px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow">
-               App Store
-            </span>
-            <span className="bg-slate-950 border border-slate-800 text-slate-300 font-bold text-[10px] px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow">
-              ▶ Google Play Store
-            </span>
+
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {/* Apple App Store Badge using Official Favicon Logo */}
+            <button
+              onClick={() => alert("✓ Opening Knews254 Official App on Apple App Store (Icon Badge: Kenya Flag K-Shield Emblem v3.2)")}
+              className="bg-slate-950 hover:bg-slate-900 border border-slate-700 hover:border-red-500/50 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-3 shadow-md transition group cursor-pointer"
+            >
+              <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0 group-hover:border-red-500 transition shadow">
+                <span className="font-black text-sm text-white font-serif">K</span>
+                <div className="absolute bottom-0 inset-x-0 h-1 flex">
+                  <div className="w-1/3 bg-slate-950" />
+                  <div className="w-1/3 bg-red-600" />
+                  <div className="w-1/3 bg-emerald-600" />
+                </div>
+              </div>
+              <div className="text-left font-sans">
+                <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-mono">Download on the</span>
+                <span className="font-bold text-xs text-white">Apple App Store</span>
+              </div>
+            </button>
+
+            {/* Google Play Store Badge using Official Favicon Logo */}
+            <button
+              onClick={() => alert("✓ Opening Knews254 Official App on Google Play Store (Icon Badge: Kenya Flag K-Shield Emblem v3.2)")}
+              className="bg-slate-950 hover:bg-slate-900 border border-slate-700 hover:border-red-500/50 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-3 shadow-md transition group cursor-pointer"
+            >
+              <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shrink-0 group-hover:border-red-500 transition shadow">
+                <span className="font-black text-sm text-white font-serif">K</span>
+                <div className="absolute bottom-0 inset-x-0 h-1 flex">
+                  <div className="w-1/3 bg-slate-950" />
+                  <div className="w-1/3 bg-red-600" />
+                  <div className="w-1/3 bg-emerald-600" />
+                </div>
+              </div>
+              <div className="text-left font-sans">
+                <span className="block text-[8px] text-slate-400 uppercase tracking-widest font-mono font-bold">GET IT ON</span>
+                <span className="font-bold text-xs text-white">Google Play Store</span>
+              </div>
+            </button>
           </div>
         </div>
 
