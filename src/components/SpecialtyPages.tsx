@@ -16,7 +16,8 @@ import {
   Award, 
   Sparkles,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  UserCheck
 } from 'lucide-react';
 import { NewsCategory, Author, GalleryAlbum, JobListing } from '../types';
 import { AUTHORS_LIST, GALLERY_ALBUMS, JOB_LISTINGS } from '../data/newsData';
@@ -31,6 +32,27 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
   category,
   onSelectCategory,
 }) => {
+  // Dynamic Authors list synced with localStorage
+  const [authorsList, setAuthorsList] = useState<Author[]>(() => {
+    const saved = localStorage.getItem('knews254_authors_list');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* fallback */ }
+    }
+    return AUTHORS_LIST;
+  });
+
+  // Re-sync if localStorage changes
+  React.useEffect(() => {
+    const handleStorage = () => {
+      const saved = localStorage.getItem('knews254_authors_list');
+      if (saved) {
+        try { setAuthorsList(JSON.parse(saved)); } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Contact form state
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactData, setContactData] = useState({ name: '', email: '', subject: '', message: '' });
@@ -62,19 +84,20 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
             <span className="text-[10px] bg-red-600 text-white font-black px-2.5 py-1 rounded uppercase tracking-widest inline-block mb-2">
               KNEWS254 EDITORIAL BOARD
             </span>
-            <h1 className="text-3xl font-black text-white">Authors, Editors & Correspondents</h1>
+            <h1 className="text-3xl font-black text-white">Authors, Editors &amp; Correspondents</h1>
             <p className="text-slate-400 text-sm max-w-2xl mt-1">
               Meet our award-winning journalists, bureau chiefs, and data analysts across 47 counties and international desks.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {AUTHORS_LIST.map((author) => (
+            {authorsList.map((author) => (
               <div
                 key={author.id}
                 onClick={() => setSelectedAuthor(author)}
                 className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-red-500/50 transition cursor-pointer space-y-4 shadow-xl"
               >
+
                 <div className="flex items-center gap-4">
                   <img
                     src={author.avatar}
@@ -310,11 +333,19 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
               </p>
 
               <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-400">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <span>Email: <strong className="text-slate-200">kellymuthomi22@gmail.com</strong></span>
                   <span>Direct: <strong className="text-slate-200">+254 708 220 323</strong></span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href="https://kelly-muthomi-kinoti.vercel.app/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-3 py-1.5 rounded-xl text-xs font-sans inline-flex items-center gap-1.5 transition shadow-lg"
+                  >
+                    <Globe className="w-3.5 h-3.5" /> Official Portfolio <ExternalLink className="w-3 h-3" />
+                  </a>
                   <a href="https://styledkid.co.ke" target="_blank" rel="noreferrer" className="text-red-400 hover:underline flex items-center gap-1">
                     StyledKid <ExternalLink className="w-3 h-3" />
                   </a>
@@ -330,18 +361,80 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center space-y-2">
               <Award className="w-8 h-8 text-red-500 mx-auto" />
-              <h3 className="font-extrabold text-sm">47 County Bureaus</h3>
+              <h3 className="font-extrabold text-sm text-white">47 County Bureaus</h3>
               <p className="text-xs text-slate-400">Direct correspondents on the ground across every county.</p>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center space-y-2">
               <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto" />
-              <h3 className="font-extrabold text-sm">Forensic Verification</h3>
+              <h3 className="font-extrabold text-sm text-white">Forensic Verification</h3>
               <p className="text-xs text-slate-400">Dedicated Knews254 Verify unit combating viral misinformation.</p>
             </div>
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center space-y-2">
               <Sparkles className="w-8 h-8 text-amber-500 mx-auto" />
-              <h3 className="font-extrabold text-sm">AI Innovation</h3>
-              <p className="text-xs text-slate-400">Integrated server-side Gemini AI for instant article briefs and translations.</p>
+              <h3 className="font-extrabold text-sm text-white">AI &amp; Supabase Innovation</h3>
+              <p className="text-xs text-slate-400">Integrated server-side Gemini AI &amp; Supabase Cloud Storage for verified news media.</p>
+            </div>
+          </div>
+
+          {/* Dynamic Editorial Board & Authors Directory */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <span className="text-[10px] bg-red-600/90 text-white font-black px-2.5 py-0.5 rounded uppercase tracking-widest inline-block mb-1">
+                  KNEWS254 EDITORIAL TEAM
+                </span>
+                <h2 className="text-xl sm:text-2xl font-black text-white font-serif">
+                  Journalists, Editors &amp; Correspondents
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Our team of dedicated reporters across East Africa. Staff can edit their profile data and images in the CMS.
+                </p>
+              </div>
+
+              <button
+                onClick={() => onSelectCategory('cms' as NewsCategory)}
+                className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition inline-flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <UserCheck className="w-4 h-4" /> Edit Profile &amp; Upload Images
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {authorsList.map((author) => (
+                <div
+                  key={author.id}
+                  onClick={() => setSelectedAuthor(author)}
+                  className="bg-slate-950/80 border border-slate-800 hover:border-red-500/60 p-4 rounded-2xl transition cursor-pointer flex items-start gap-4 group"
+                >
+                  <img
+                    src={author.avatar}
+                    alt={author.name}
+                    className="w-14 h-14 rounded-xl object-cover shrink-0 border border-slate-700 group-hover:border-red-500"
+                  />
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="font-extrabold text-sm text-white truncate group-hover:text-red-400">{author.name}</h3>
+                      <span className="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800 shrink-0">
+                        {author.articlesCount} Articles
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-red-400 font-bold truncate">{author.role}</p>
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{author.bio}</p>
+
+                    {author.website && (
+                      <a
+                        href={author.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-[11px] text-sky-400 font-mono font-bold hover:underline pt-1"
+                      >
+                        <Globe className="w-3 h-3" /> Portfolio <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

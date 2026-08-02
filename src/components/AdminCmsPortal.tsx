@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { KmkLogo } from './KmkLogo';
 import { DoreenPhoto } from './DoreenPhoto';
+import { uploadMediaToSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { AUTHORS_LIST } from '../data/newsData';
 import {
   Sliders,
   CheckSquare,
@@ -45,7 +47,10 @@ import {
   ChevronRight,
   Server,
   Layers,
-  HardDrive
+  HardDrive,
+  Globe,
+  User,
+  Image
 } from 'lucide-react';
 
 interface StaffUser {
@@ -316,8 +321,111 @@ export const AdminCmsPortal: React.FC = () => {
 
   // Active portal tab
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'editorial' | 'factcheck' | 'hr' | 'support' | 'reviews' | 'corrections' | 'chat_rota' | 'audit_logs' | 'infrastructure'
+    'overview' | 'vault' | 'profile' | 'editorial' | 'factcheck' | 'hr' | 'support' | 'reviews' | 'corrections' | 'chat_rota' | 'audit_logs' | 'infrastructure'
   >('overview');
+
+  // Staff Profile Editing State
+  const [profileData, setProfileData] = useState(() => {
+    return {
+      name: currentUser?.name || 'Kelly Muthomi Kinoti',
+      role: currentUser?.role || 'Founder, Chairman & Super Administrator',
+      email: currentUser?.email || 'kellymuthomi22@gmail.com',
+      department: currentUser?.department || 'Executive Governance & Engineering',
+      location: 'Nairobi HQ',
+      twitter: currentUser?.name?.toLowerCase().includes('kelly') ? '@KellyMuthomi254' : '@' + (currentUser?.name?.replace(/\s+/g, '') || 'KnewsStaff'),
+      website: currentUser?.name?.toLowerCase().includes('kelly') ? 'https://kelly-muthomi-kinoti.vercel.app/' : '',
+      bio: currentUser?.name?.toLowerCase().includes('kelly')
+        ? 'Visionary creator of Knews254, Educator, Lead Full-Stack Software Developer, and Academic Research Analyst bridging digital media, ICT innovation, and quantitative data analytics.'
+        : `Journalist and ${currentUser?.role || 'staff member'} at Knews254 Media Group.`,
+      avatar: currentUser?.name?.toLowerCase().includes('kelly')
+        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'
+        : 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80'
+    };
+  });
+
+  const [profileUploading, setProfileUploading] = useState(false);
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+
+  // Supabase Local Configuration Manager State
+  const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => localStorage.getItem('knews254_supabase_url') || (import.meta as any).env?.VITE_SUPABASE_URL || 'https://jplxdzfyaxpbrnpnbcug.supabase.co');
+  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => localStorage.getItem('knews254_supabase_key') || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'sb_publishable_XGBm-0k-2bC-6bVUIEdJ7Q_k-lx4hjY');
+  const [supabaseSavedSuccess, setSupabaseSavedSuccess] = useState(false);
+
+  const handleSaveSupabaseConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('knews254_supabase_url', supabaseUrlInput);
+    localStorage.setItem('knews254_supabase_key', supabaseKeyInput);
+    setSupabaseSavedSuccess(true);
+    setTimeout(() => setSupabaseSavedSuccess(false), 3000);
+  };
+
+  const handleProfileAvatarUpload = async (file: File) => {
+    if (!file) return;
+    setProfileUploading(true);
+    setUploadMessage('Uploading file to Supabase storage...');
+    const result = await uploadMediaToSupabase(file, 'avatars');
+    setProfileUploading(false);
+    if (result.url) {
+      setProfileData(prev => ({ ...prev, avatar: result.url }));
+      setUploadMessage(result.error ? `Notice: ${result.error}` : '✓ Image uploaded successfully to Supabase Storage!');
+    }
+  };
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const updatedUser: StaffUser = {
+      ...currentUser,
+      name: profileData.name,
+      role: profileData.role,
+      email: profileData.email,
+      department: profileData.department,
+    };
+
+    setCurrentUser(updatedUser);
+    localStorage.setItem('knews254_staff_session', JSON.stringify(updatedUser));
+
+    // Update staffList state & localStorage
+    const updatedStaffList = staffList.map(s => s.id === currentUser.id ? updatedUser : s);
+    setStaffList(updatedStaffList);
+    localStorage.setItem('knews254_staff_list', JSON.stringify(updatedStaffList));
+
+    // Sync with AUTHORS_LIST in localStorage for public pages
+    const savedAuthors = localStorage.getItem('knews254_authors_list');
+    let currentAuthors = savedAuthors ? JSON.parse(savedAuthors) : AUTHORS_LIST;
+    const existingIdx = currentAuthors.findIndex((a: any) => 
+      a.email.toLowerCase() === currentUser.email.toLowerCase() || 
+      a.name.toLowerCase() === currentUser.name.toLowerCase()
+    );
+
+    const authorObj = {
+      id: `auth-${currentUser.id}`,
+      name: profileData.name,
+      role: profileData.role,
+      bio: profileData.bio,
+      avatar: profileData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+      email: profileData.email,
+      twitter: profileData.twitter,
+      website: profileData.website,
+      location: profileData.location,
+      articlesCount: 154,
+      featuredBeats: ['politics', 'investigations', 'technology', 'governance']
+    };
+
+    if (existingIdx >= 0) {
+      currentAuthors[existingIdx] = { ...currentAuthors[existingIdx], ...authorObj };
+    } else {
+      currentAuthors.unshift(authorObj);
+    }
+
+    localStorage.setItem('knews254_authors_list', JSON.stringify(currentAuthors));
+    window.dispatchEvent(new Event('storage'));
+
+    setProfileSaveSuccess(true);
+    setTimeout(() => setProfileSaveSuccess(false), 4500);
+  };
 
   /* -------------------------------------------------------------------------- */
   /* ENTERPRISE INFRASTRUCTURE, STORAGE & CACHING CONTROLS                      */
@@ -733,6 +841,7 @@ export const AdminCmsPortal: React.FC = () => {
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800/80 scrollbar-thin">
         {[
           { id: 'overview', label: 'Pulse Overview', icon: BarChart3 },
+          { id: 'profile', label: 'My Profile & Supabase Storage', icon: UserCheck },
           { id: 'vault', label: `Admin Password Vault (${staffList.length})`, icon: Key },
           { id: 'editorial', label: `Editorial Pipeline (${articlesList.length})`, icon: FileText },
           { id: 'factcheck', label: `Fact Check (${factClaims.length})`, icon: Shield },
@@ -893,6 +1002,286 @@ export const AdminCmsPortal: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: MY STAFF PROFILE & SUPABASE STORAGE */}
+      {activeTab === 'profile' && (
+        <div className="space-y-6">
+          <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-sky-950 text-sky-400 border border-sky-800/80 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-2">
+                  <UserCheck className="w-3.5 h-3.5 text-sky-400" />
+                  STAFF IDENTITY & SUPABASE INTEGRATION
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-white font-serif">
+                  My Staff Profile & Supabase Storage Manager
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Customize your personal profile, role bio, portfolio links, and upload profile pictures via Supabase.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 p-3 rounded-2xl">
+                <Database className="w-5 h-5 text-emerald-400 shrink-0" />
+                <div className="text-left font-mono text-xs">
+                  <span className="block text-[10px] text-slate-400 uppercase">Supabase Upload Engine</span>
+                  <span className={`font-bold text-[11px] ${isSupabaseConfigured() ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {isSupabaseConfigured() ? '✓ Connected to Supabase Cloud' : '⚡ Storage Active (Local Fallback Ready)'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {profileSaveSuccess && (
+              <div className="bg-emerald-950/90 border-2 border-emerald-500 p-4 rounded-2xl text-emerald-300 text-xs flex items-center justify-between shadow-xl animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <span>
+                    <strong>Profile Saved Successfully!</strong> Your details, custom images, and portfolio link have been synchronized across Knews254.
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-900/60 px-2 py-1 rounded">
+                  SYNCED TO ABOUT US & AUTHORS
+                </span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Column 1: Avatar Upload & Supabase Controls */}
+              <div className="space-y-6">
+                {/* Profile Photo Upload Box */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 text-center">
+                  <h3 className="text-sm font-bold text-white flex items-center justify-center gap-2">
+                    <Image className="w-4 h-4 text-sky-400" /> Profile Picture / Avatar
+                  </h3>
+
+                  <div className="relative w-32 h-32 mx-auto rounded-2xl overflow-hidden border-2 border-red-500/50 shadow-2xl bg-slate-950 flex items-center justify-center group">
+                    {profileData.avatar ? (
+                      <img src={profileData.avatar} alt="Avatar Preview" className="w-full h-full object-cover" />
+                    ) : currentUser?.isChiefAdmin ? (
+                      <KmkLogo variant="card" showName={false} className="w-full bg-white p-2" />
+                    ) : (
+                      <div className="text-2xl font-black text-slate-400">{profileData.name.charAt(0)}</div>
+                    )}
+                    {profileUploading && (
+                      <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center text-xs text-sky-400 font-mono">
+                        <RefreshCw className="w-6 h-6 animate-spin mb-1" />
+                        Uploading...
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[11px] text-slate-400 font-mono">Upload via Supabase or Computer:</label>
+                    <label className="cursor-pointer bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700 font-mono font-bold text-xs px-4 py-2 rounded-xl transition inline-flex items-center gap-2 shadow">
+                      <Upload className="w-3.5 h-3.5 text-sky-400" />
+                      Select Photo File
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleProfileAvatarUpload(file);
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-mono text-left mb-1">Or direct Image URL:</label>
+                    <input
+                      type="url"
+                      value={profileData.avatar}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, avatar: e.target.value }))}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 p-2.5 rounded-xl font-mono"
+                    />
+                  </div>
+
+                  {uploadMessage && (
+                    <p className="text-[10px] font-mono text-emerald-400 bg-slate-950 p-2 rounded-lg border border-slate-800">
+                      {uploadMessage}
+                    </p>
+                  )}
+                </div>
+
+                {/* Supabase Storage Integration Credentials Settings */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2 font-serif">
+                      <Database className="w-4 h-4 text-emerald-400" /> Supabase Storage Keys
+                    </h3>
+                    <span className="text-[10px] font-mono bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800 font-bold">
+                      LIVE ENGINE
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Configure your Supabase Cloud credentials below to upload profile pictures, media attachments, and documents directly to your Supabase bucket.
+                  </p>
+
+                  <form onSubmit={handleSaveSupabaseConfig} className="space-y-3 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-mono text-slate-300 mb-1">VITE_SUPABASE_URL</label>
+                      <input
+                        type="text"
+                        value={supabaseUrlInput}
+                        onChange={(e) => setSupabaseUrlInput(e.target.value)}
+                        placeholder="https://xyzproject.supabase.co"
+                        className="w-full bg-slate-950 border border-slate-800 text-xs text-emerald-400 font-mono p-2.5 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-mono text-slate-300 mb-1">VITE_SUPABASE_ANON_KEY</label>
+                      <input
+                        type="password"
+                        value={supabaseKeyInput}
+                        onChange={(e) => setSupabaseKeyInput(e.target.value)}
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
+                        className="w-full bg-slate-950 border border-slate-800 text-xs text-emerald-400 font-mono p-2.5 rounded-xl"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Database className="w-3.5 h-3.5" /> Save Supabase Keys to Local Environment
+                    </button>
+
+                    {supabaseSavedSuccess && (
+                      <p className="text-[10px] text-emerald-400 font-mono text-center font-bold">
+                        ✓ Supabase Credentials Saved! Storage upload engine updated.
+                      </p>
+                    )}
+                  </form>
+                </div>
+              </div>
+
+              {/* Column 2 & 3: Personal & Professional Profile Edit Form */}
+              <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+                <div className="border-b border-slate-800 pb-3">
+                  <h3 className="text-base font-black text-white font-serif flex items-center gap-2">
+                    <User className="w-4 h-4 text-red-500" /> Personal &amp; Professional Details
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    This information appears on your author card, news articles, and the Knews254 About Us page.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={profileData.name}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl font-medium focus:border-red-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Role / Official Title</label>
+                      <input
+                        type="text"
+                        required
+                        value={profileData.role}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, role: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl font-medium focus:border-red-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={profileData.email}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl font-mono focus:border-red-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Department / Division</label>
+                      <input
+                        type="text"
+                        required
+                        value={profileData.department}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, department: e.target.value }))}
+                        className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl font-medium focus:border-red-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-slate-300 font-bold mb-1 flex items-center justify-between">
+                        <span>Portfolio Website URL (Personal Site)</span>
+                        <span className="text-[10px] text-sky-400 font-mono">e.g. https://kelly-muthomi-kinoti.vercel.app/</span>
+                      </label>
+                      <div className="relative">
+                        <Globe className="w-4 h-4 text-sky-400 absolute left-3 top-3" />
+                        <input
+                          type="url"
+                          value={profileData.website}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, website: e.target.value }))}
+                          placeholder="https://kelly-muthomi-kinoti.vercel.app/"
+                          className="w-full bg-slate-950 border border-slate-800 text-sky-300 pl-9 pr-3 py-2.5 rounded-xl font-mono focus:border-sky-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Twitter / X Handle</label>
+                      <input
+                        type="text"
+                        value={profileData.twitter}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, twitter: e.target.value }))}
+                        placeholder="@KellyMuthomi254"
+                        className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl font-mono focus:border-red-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-bold mb-1">Office Location</label>
+                      <input
+                        type="text"
+                        value={profileData.location}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, location: e.target.value }))}
+                        placeholder="Nairobi HQ"
+                        className="w-full bg-slate-950 border border-slate-800 text-white p-2.5 rounded-xl font-medium focus:border-red-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1">Personal Bio &amp; Research Focus</label>
+                    <textarea
+                      rows={4}
+                      value={profileData.bio}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
+                      placeholder="Share your experience, beats, academic achievements..."
+                      className="w-full bg-slate-950 border border-slate-800 text-slate-200 p-3 rounded-xl leading-relaxed focus:border-red-500 outline-none"
+                    />
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+                    <button
+                      type="submit"
+                      className="bg-red-600 hover:bg-red-500 text-white font-extrabold px-6 py-3 rounded-xl transition shadow-lg text-xs flex items-center gap-2 cursor-pointer"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Save Profile &amp; Sync to About Us Page
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
