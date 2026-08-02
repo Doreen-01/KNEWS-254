@@ -4,10 +4,21 @@ const DEFAULT_SUPABASE_URL = 'https://jplxdzfyaxpbrnpnbcug.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'sb_publishable_XGBm-0k-2bC-6bVUIEdJ7Q_k-lx4hjY';
 
 const getEnvVar = (key: string): string => {
-  const localVal = typeof localStorage !== 'undefined' ? localStorage.getItem(`knews254_${key.toLowerCase()}`) : null;
-  if (localVal) return localVal;
+  if (typeof localStorage !== 'undefined') {
+    const shortKey = key.replace('VITE_', '').toLowerCase();
+    const directKey = key.toLowerCase();
+    const val = localStorage.getItem(`knews254_${shortKey}`) || localStorage.getItem(`knews254_${directKey}`);
+    if (val && val.trim() && !val.includes('your-project') && !val.includes('your-supabase')) {
+      return val.trim();
+    }
+  }
+
   const metaEnv = (import.meta as any).env || {};
-  if (metaEnv[key]) return metaEnv[key];
+  const metaVal = metaEnv[key];
+  if (metaVal && String(metaVal).trim() && !String(metaVal).includes('your-project')) {
+    return String(metaVal).trim();
+  }
+
   if (key === 'VITE_SUPABASE_URL') return DEFAULT_SUPABASE_URL;
   if (key === 'VITE_SUPABASE_ANON_KEY') return DEFAULT_SUPABASE_KEY;
   return '';
@@ -19,6 +30,7 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(
     url && 
     key && 
+    (url.startsWith('http://') || url.startsWith('https://')) &&
     !url.includes('your-project') && 
     !key.includes('your-supabase')
   );
@@ -27,8 +39,13 @@ export function isSupabaseConfigured(): boolean {
 export function getSupabaseClient(): SupabaseClient | null {
   const url = getEnvVar('VITE_SUPABASE_URL');
   const key = getEnvVar('VITE_SUPABASE_ANON_KEY');
-  if (url && key && !url.includes('your-project') && !key.includes('your-supabase')) {
-    return createClient(url, key);
+  if (url && key && (url.startsWith('http://') || url.startsWith('https://'))) {
+    try {
+      return createClient(url, key);
+    } catch (err) {
+      console.warn('Supabase initialization failed:', err);
+      return null;
+    }
   }
   return null;
 }

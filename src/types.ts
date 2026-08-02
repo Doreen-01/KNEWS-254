@@ -2,6 +2,7 @@ export type NewsCategory =
   | 'home'
   | 'breaking'
   | 'latest'
+  | 'blog'
   | 'politics'
   | 'elections'
   | 'business'

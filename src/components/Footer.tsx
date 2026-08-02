@@ -103,14 +103,28 @@ export const Footer: React.FC<FooterProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] font-mono text-slate-300">
+          <div className="flex flex-wrap items-center gap-4 text-[11px] font-mono text-slate-300">
             <span className="flex items-center gap-1 text-slate-400">
               <MapPin className="w-3.5 h-3.5 text-red-500" /> HQ: Nairobi, Kenya
             </span>
             <span className="hidden md:inline">•</span>
-            <span className="hidden md:flex items-center gap-1 text-slate-400">
-              <PhoneCall className="w-3.5 h-3.5 text-emerald-400" /> Desk: +254 700 254 254
-            </span>
+            <a
+              href="https://wa.me/254711837011?text=Hello%20Knews254%20Newsroom,%20I%20have%20a%20breaking%20news%20tip/inquiry:"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-emerald-400 hover:underline font-bold"
+              title="Chat with Newsroom on WhatsApp"
+            >
+              <PhoneCall className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Newsroom
+            </a>
+            <span className="hidden md:inline">•</span>
+            <a
+              href="mailto:knews254ke@gmail.com"
+              className="flex items-center gap-1 text-amber-400 hover:underline font-bold"
+              title="Send email to Knews254"
+            >
+              <Mail className="w-3.5 h-3.5 text-amber-400" /> knews254ke@gmail.com
+            </a>
           </div>
         </div>
 
@@ -221,6 +235,11 @@ export const Footer: React.FC<FooterProps> = ({
               Editorial Beats
             </h4>
             <ul className="space-y-2 text-slate-400">
+              <li>
+                <button onClick={() => navTo('blog')} className="hover:text-amber-400 font-bold text-amber-400 transition text-left flex items-center gap-1">
+                  Knews254 Blog
+                </button>
+              </li>
               <li>
                 <button onClick={() => navTo('breaking')} className="hover:text-red-400 transition text-left">
                   Breaking News

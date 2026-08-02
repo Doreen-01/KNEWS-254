@@ -15,7 +15,7 @@ import { SpecialtyPages } from './components/SpecialtyPages';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { FEATURED_ARTICLES } from './data/newsData';
 import { Article, NewsCategory } from './types';
-import { Flame, Sparkles, Clock, Eye, Sliders, ArrowRight, TrendingUp, ShieldCheck, Newspaper, Compass } from 'lucide-react';
+import { Flame, Sparkles, Clock, Eye, Sliders, ArrowRight, TrendingUp, ShieldCheck, Newspaper, Compass, Home, Building2, Vote, FileCheck, PhoneCall } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'platform' | 'prd'>('platform');
@@ -110,7 +110,7 @@ export default function App() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1">
+      <main className="flex-1 pb-16 md:pb-0">
         {activeTab === 'prd' ? (
           <PrdViewer />
         ) : isSpecialtyCategory ? (
@@ -279,6 +279,80 @@ export default function App() {
         onOpenCms={() => setShowAdminPortal(true)}
         onOpenAi={() => setIsAiAssistantOpen(true)}
       />
+
+      {/* Floating WhatsApp Live Newsroom Button */}
+      <a
+        href="https://wa.me/254711837011?text=Hello%20Knews254%20Newsroom,%20I%20have%20a%20breaking%20news%20tip/inquiry:"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-20 left-4 z-40 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-full shadow-2xl border border-emerald-400/60 transition duration-300 hover:scale-105 flex items-center gap-2 group"
+        title="Chat or send breaking news tips directly on WhatsApp"
+      >
+        <PhoneCall className="w-4 h-4 text-white group-hover:rotate-12 transition-transform" />
+        <span className="font-bold">WhatsApp Desk</span>
+      </a>
+
+      {/* Modern Mobile Bottom Navigation Bar (Thumb Friendly) */}
+      <nav 
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/90 px-2 py-1.5 flex items-center justify-around shadow-2xl"
+        aria-label="Mobile Bottom Navigation"
+      >
+        <button
+          onClick={() => handleSelectCategory('home')}
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] px-2 py-1 rounded-xl transition ${
+            selectedCategory === 'home' && activeTab === 'platform' ? 'text-red-500 font-bold bg-slate-900' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Home className="w-4 h-4" />
+          <span className="text-[10px] tracking-tight mt-0.5">Home</span>
+        </button>
+
+        <button
+          onClick={() => handleSelectCategory('breaking')}
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] px-2 py-1 rounded-xl transition ${
+            selectedCategory === 'breaking' ? 'text-red-500 font-bold bg-slate-900' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Flame className="w-4 h-4 text-red-500 animate-pulse" />
+          <span className="text-[10px] tracking-tight mt-0.5">Breaking</span>
+        </button>
+
+        <button
+          onClick={() => handleSelectCategory('county')}
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] px-2 py-1 rounded-xl transition ${
+            selectedCategory === 'county' ? 'text-blue-400 font-bold bg-slate-900' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span className="text-[10px] tracking-tight mt-0.5">Counties</span>
+        </button>
+
+        <button
+          onClick={() => handleSelectCategory('elections')}
+          className={`flex flex-col items-center justify-center min-w-[56px] min-h-[44px] px-2 py-1 rounded-xl transition ${
+            selectedCategory === 'elections' ? 'text-emerald-400 font-bold bg-slate-900' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Vote className="w-4 h-4" />
+          <span className="text-[10px] tracking-tight mt-0.5">2027 Polls</span>
+        </button>
+
+        <button
+          onClick={() => setIsAiAssistantOpen(true)}
+          className="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] px-2 py-1 rounded-xl text-amber-400 hover:text-amber-300 transition"
+        >
+          <Sparkles className="w-4 h-4 text-amber-400 animate-spin-slow" />
+          <span className="text-[10px] font-bold tracking-tight mt-0.5">AI Desk</span>
+        </button>
+
+        <button
+          onClick={() => setShowAdminPortal(true)}
+          className="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] px-2 py-1 rounded-xl text-slate-400 hover:text-white transition"
+        >
+          <FileCheck className="w-4 h-4 text-slate-300" />
+          <span className="text-[10px] tracking-tight mt-0.5">CMS</span>
+        </button>
+      </nav>
     </div>
   );
 }

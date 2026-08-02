@@ -471,15 +471,35 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
               <h3 className="font-extrabold text-sm text-white">Nairobi Headquarters</h3>
               <p className="text-xs text-slate-400">Knews254 Media Towers, Kimathi Street, Nairobi CBD.</p>
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
-              <Phone className="w-5 h-5 text-emerald-500" />
-              <h3 className="font-extrabold text-sm text-white">Newsdesk Hotline</h3>
-              <p className="text-xs text-slate-400">+254 (0) 700 254 254 / +254 (0) 20 254 0000</p>
+            
+            <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 space-y-2.5 shadow-lg relative overflow-hidden group">
+              <div className="flex items-center justify-between">
+                <Phone className="w-5 h-5 text-emerald-400" />
+                <span className="bg-emerald-950 text-emerald-400 font-mono text-[9px] font-extrabold px-2 py-0.5 rounded border border-emerald-800">
+                  24/7 DIRECT DESK
+                </span>
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm text-white">Call / WhatsApp Newsroom</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Click below to open direct chat with our editorial team</p>
+              </div>
+              <a
+                href="https://wa.me/254711837011?text=Hello%20Knews254%20Newsroom,%20I%20have%20a%20breaking%20news%20tip/inquiry:"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2 px-3 rounded-xl transition flex items-center justify-center gap-2 shadow-md"
+              >
+                Open WhatsApp Chat
+              </a>
             </div>
+
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
               <Mail className="w-5 h-5 text-amber-500" />
-              <h3 className="font-extrabold text-sm text-white">Official Email</h3>
-              <p className="text-xs text-slate-400">editor@knews254.co.ke / tips@knews254.co.ke</p>
+              <h3 className="font-extrabold text-sm text-white">Official Email Address</h3>
+              <a href="mailto:knews254ke@gmail.com" className="text-xs text-amber-400 hover:underline font-bold block">
+                knews254ke@gmail.com
+              </a>
+              <p className="text-[11px] text-slate-500">24/7 Editorial Inbox &amp; Official Press Desk</p>
             </div>
           </div>
 

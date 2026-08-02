@@ -1549,6 +1549,8 @@ export const AdminCmsPortal: React.FC = () => {
                         onChange={e => setNewDraft({ ...newDraft, category: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
                       >
+                        <option>Blog</option>
+                        <option>Blog & Opinion</option>
                         <option>Politics</option>
                         <option>Business</option>
                         <option>Elections 2027</option>

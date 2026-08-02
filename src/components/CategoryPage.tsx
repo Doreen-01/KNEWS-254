@@ -58,6 +58,11 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
           title: 'Latest News Stream',
           desc: 'Continuous live coverage updated every hour across all desks.',
         };
+      case 'blog':
+        return {
+          title: 'Official Knews254 Editorial Blog & Columns',
+          desc: 'Independent commentaries, analytical blog posts, guest columns, and opinion dispatches from our journalists and community writers.',
+        };
       case 'politics':
         return {
           title: 'Politics & Statehouse Desk',

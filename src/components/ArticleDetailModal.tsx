@@ -341,12 +341,21 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
                 X / Twitter
               </a>
               <a
-                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${article.title} - ${window.location.href}`)}`}
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${article.title} - Read on Knews254: ${window.location.href}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="bg-emerald-950/80 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 text-xs font-bold px-3 py-1.5 rounded-lg transition"
+                className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-400 border border-emerald-700/80 text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow"
               >
-                WhatsApp
+                WhatsApp Share
+              </a>
+              <a
+                href={`https://wa.me/254711837011?text=${encodeURIComponent(`Hello Knews254 Editors, I have a correction or tip regarding article: "${article.title}"`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-800 text-xs font-bold px-3 py-1.5 rounded-lg transition hidden sm:flex items-center gap-1"
+                title="Send story tip or correction to editor on WhatsApp"
+              >
+                Tip Editor on WhatsApp
               </a>
               <button
                 onClick={handleCopyLink}

@@ -150,6 +150,58 @@ export const AUTHORS_LIST: Author[] = [
 
 export const FEATURED_ARTICLES: Article[] = [
   {
+    id: "art-blog-1",
+    title: "The Future of Citizen Journalism in Kenya: Why Every Voice Across 47 Counties Matters",
+    slug: "future-of-citizen-journalism-in-kenya-blog",
+    summary: "Reflections on how digital publishing, independent bloggers, and county contributors are democratizing news coverage from Turkana to Kwale.",
+    content: "In an era of rapid technological transformation, the power to document story dispatches is no longer confined to traditional newsrooms in Nairobi CBD. From local community leaders in Marsabit to tech innovators in Eldoret, citizen bloggers and independent opinion writers are filling critical information gaps.\n\nAt Knews254, our open Editorial CMS empowers journalists, opinion leaders, and community members to submit analytical posts, opinion columns, and field reports. By combining rigorous fact verification with diverse community viewpoints, we are building Kenya's most inclusive digital publishing platform.",
+    category: "blog",
+    subcategory: "Opinion & Columns",
+    additionalCategories: ["opinion", "latest"],
+    author: {
+      id: "auth-0",
+      name: "Kelly Muthomi Kinoti",
+      role: "Founder, Chairman & Super Administrator",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
+    },
+    publishedAt: "2026-08-01T10:00:00Z",
+    readTime: "4 min read",
+    imageUrl: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1200&auto=format&fit=crop&q=80",
+    imageCaption: "Digital journalism and independent blogging in Kenya.",
+    location: "Nairobi HQ",
+    county: "Nairobi",
+    isTrending: true,
+    isFeatured: true,
+    viewCount: 15400,
+    tags: ["Blog", "Citizen Journalism", "Knews254", "Opinion", "47 Counties"]
+  },
+  {
+    id: "art-blog-2",
+    title: "How Responsible AI and Human Moderation Safeguard Kenya's Public Sphere",
+    slug: "responsible-ai-and-human-moderation-blog",
+    summary: "An insider look into Knews254's dual verification engine: combining advanced AI anomaly detection with human editorial oversight.",
+    content: "As artificial intelligence reshapes online content creation, the threat of deepfakes, synthetic misinformation, and unverified rumors poses a challenge to election integrity and public trust. \n\nOur editorial board employs a hybrid verification protocol: AI models rapidly triage viral claims and extract key entity references, while senior fact-checkers and legal compliance officers conduct rigorous manual OSINT audits. This blog dispatch explores the technical and ethical principles guiding our newsroom.",
+    category: "blog",
+    subcategory: "Tech & Media Blog",
+    additionalCategories: ["technology", "ai", "opinion"],
+    author: {
+      id: "auth-eic-1",
+      name: "Muchui Mwirigi",
+      role: "Editor-in-Chief & Community Moderator",
+      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80"
+    },
+    publishedAt: "2026-07-31T14:20:00Z",
+    readTime: "5 min read",
+    imageUrl: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=1200&auto=format&fit=crop&q=80",
+    imageCaption: "Newsroom editorial desk and verification workstation.",
+    location: "Nairobi",
+    county: "Nairobi",
+    isTrending: false,
+    isFeatured: true,
+    viewCount: 9800,
+    tags: ["AI Ethics", "Media Literacy", "Editorial Blog", "Fact Checking"]
+  },
+  {
     id: "art-1",
     title: "Kenya Central Bank Holds Benchmark Rate at 12.0% as Shilling Gains Against Major Currencies",
     slug: "cbk-benchmark-rate-held-shilling-gains",

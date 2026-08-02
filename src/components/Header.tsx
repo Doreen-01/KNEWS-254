@@ -28,7 +28,9 @@ import {
   Command,
   SlidersHorizontal,
   Bookmark,
-  Share2
+  Share2,
+  PhoneCall,
+  PenTool
 } from 'lucide-react';
 import { NewsCategory } from '../types';
 
@@ -108,6 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'home', label: 'Home' },
     { id: 'breaking', label: 'Breaking', icon: <Flame className="w-3.5 h-3.5 text-red-500 animate-pulse" />, badge: 'LIVE' },
     { id: 'latest', label: 'Latest News' },
+    { id: 'blog', label: 'Blog', icon: <PenTool className="w-3.5 h-3.5 text-amber-400" />, badge: 'POSTS' },
     { id: 'politics', label: 'Politics' },
     { id: 'elections', label: 'Elections 2027', icon: <Vote className="w-3.5 h-3.5 text-emerald-500" />, badge: 'HOT' },
     { id: 'business', label: 'Business' },
@@ -174,6 +177,7 @@ export const Header: React.FC<HeaderProps> = ({
       title: 'Opinion & Integrity',
       icon: <ShieldCheck className="w-4 h-4 text-blue-400" />,
       items: [
+        { id: 'blog' as NewsCategory, label: 'Official Knews254 Blog' },
         { id: 'opinion' as NewsCategory, label: 'Columnists & Opinion' },
         { id: 'editorials' as NewsCategory, label: 'Board Editorials' },
         { id: 'fact-checking' as NewsCategory, label: 'Fact-Check Desk' },
@@ -280,23 +284,26 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </div>
 
-            {/* Language Switcher */}
-            <div className="flex items-center bg-slate-950 rounded p-0.5 border border-slate-800">
+            {/* Language Switcher with 44px Touch Targets */}
+            <div className="flex items-center bg-slate-950 rounded-lg p-1 border border-slate-800 gap-1">
               <button 
                 onClick={() => setLanguage('en')} 
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${language === 'en' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`min-w-[36px] min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center ${language === 'en' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                aria-label="Switch to English language"
               >
                 EN
               </button>
               <button 
                 onClick={() => setLanguage('sw')} 
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${language === 'sw' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`min-w-[36px] min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center ${language === 'sw' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                aria-label="Switch to Swahili language"
               >
                 SW
               </button>
               <button 
                 onClick={() => setLanguage('sheng')} 
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition ${language === 'sheng' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`min-w-[36px] min-h-[36px] px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center ${language === 'sheng' ? 'bg-red-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                aria-label="Switch to Sheng dialect"
               >
                 SHENG
               </button>
@@ -381,6 +388,18 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full animate-ping" />
             )}
           </button>
+
+          {/* WhatsApp Newsroom Direct Tip Button */}
+          <a
+            href="https://wa.me/254711837011?text=Hello%20Knews254%20Newsroom,%20I%20have%20a%20breaking%20news%20tip/inquiry:"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center gap-1.5 bg-emerald-950/90 hover:bg-emerald-900 text-emerald-400 border border-emerald-700/80 px-3 py-2 rounded-xl text-xs font-bold transition shadow-md"
+            title="Chat or send breaking news tips directly on WhatsApp"
+          >
+            <PhoneCall className="w-3.5 h-3.5 text-emerald-400" />
+            <span>WhatsApp Desk</span>
+          </a>
 
           {/* CMS Admin Portal */}
           <button
