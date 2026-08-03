@@ -3,7 +3,7 @@ import { Article, NewsCategory } from '../types';
 export interface SeoMetadataOptions {
   title?: string;
   description?: string;
-  category?: NewsCategory;
+  category?: NewsCategory | string;
   article?: Article | null;
   searchQuery?: string;
   imageUrl?: string;

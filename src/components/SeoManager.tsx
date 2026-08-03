@@ -11,7 +11,7 @@ interface SeoManagerProps {
 }
 
 export const SeoManager: React.FC<SeoManagerProps> = ({
-  category = 'home',
+  category = 'home' as NewsCategory,
   article = null,
   searchQuery = '',
   customTitle

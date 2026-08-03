@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { KmkLogo } from './KmkLogo';
 import { DoreenPhoto } from './DoreenPhoto';
 import { uploadMediaToSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { articleService } from '../services/articleService';
+import { authService } from '../services/authService';
 import { AUTHORS_LIST } from '../data/newsData';
 import {
   Sliders,
@@ -62,6 +64,7 @@ interface StaffUser {
   clearanceLevel: string;
   isChiefAdmin: boolean;
   isCustomPhoto?: boolean;
+  avatar?: string;
   securityCode: string;
   passwordHash: string;
   passwordStatus: 'ACTIVE_ENCRYPTED' | 'PENDING_SET' | 'RESET_REQUIRED';
@@ -442,12 +445,26 @@ export const AdminCmsPortal: React.FC = () => {
   const handleProfileAvatarUpload = async (file: File) => {
     if (!file) return;
     setProfileUploading(true);
-    setUploadMessage('Uploading file to Supabase storage...');
+    setUploadMessage('Uploading image to Supabase Storage bucket...');
     const result = await uploadMediaToSupabase(file, 'avatars');
     setProfileUploading(false);
+    
     if (result.url) {
-      setProfileData(prev => ({ ...prev, avatar: result.url }));
-      setUploadMessage(result.error ? `Notice: ${result.error}` : '✓ Image uploaded successfully to Supabase Storage!');
+      const newAvatarUrl = result.url;
+      setProfileData(prev => ({ ...prev, avatar: newAvatarUrl }));
+      setUploadMessage(result.error ? `Notice: ${result.error}` : '✓ Profile picture uploaded successfully and saved to profile!');
+
+      // Instantly persist avatar to currentUser & auth service
+      if (currentUser) {
+        const updatedUser: StaffUser = {
+          ...currentUser,
+          avatar: newAvatarUrl,
+          isCustomPhoto: true
+        };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('knews254_staff_session', JSON.stringify(updatedUser));
+        authService.updateProfile({ profile_image: newAvatarUrl });
+      }
     }
   };
 
@@ -461,10 +478,21 @@ export const AdminCmsPortal: React.FC = () => {
       role: profileData.role,
       email: profileData.email,
       department: profileData.department,
+      avatar: profileData.avatar,
+      isCustomPhoto: true
     };
 
     setCurrentUser(updatedUser);
     localStorage.setItem('knews254_staff_session', JSON.stringify(updatedUser));
+
+    // Save to auth service
+    authService.updateProfile({
+      name: profileData.name,
+      email: profileData.email,
+      department: profileData.department,
+      profile_image: profileData.avatar,
+      biography: profileData.bio
+    });
 
     // Update staffList state & localStorage
     const updatedStaffList = staffList.map(s => s.id === currentUser.id ? updatedUser : s);
@@ -569,35 +597,80 @@ export const AdminCmsPortal: React.FC = () => {
     fileName: ''
   });
 
-  const handleFileUpload = (file: File) => {
+  useEffect(() => {
+    // Sync articles list from articleService on mount
+    const loadArticles = async () => {
+      const articles = await articleService.listPublishedArticles();
+      if (articles && articles.length > 0) {
+        setArticlesList(articles.map(a => ({
+          id: a.id,
+          title: a.title,
+          author: a.author.name,
+          category: a.category,
+          status: 'Published',
+          priority: a.isBreaking ? 'Breaking News' : a.isFeatured ? 'High Priority' : 'Normal',
+          date: a.publishedAt,
+          reads: `${(a.viewCount / 1000).toFixed(1)}k`,
+          wordCount: a.content.split(' ').length || 450
+        })));
+      }
+    };
+    loadArticles();
+  }, []);
+
+  const handleFileUpload = async (file: File) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
+    const result = await uploadMediaToSupabase(file, 'media');
+    if (result.url) {
       setNewDraft(prev => ({
         ...prev,
-        imagePreview: reader.result as string,
+        imagePreview: result.url,
         fileName: file.name
       }));
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
-  const handleCreateDraft = (e: React.FormEvent) => {
+  const handleCreateDraft = async (e: React.FormEvent) => {
     e.preventDefault();
-    setArticlesList([
-      {
-        id: `art-${Date.now()}`,
-        title: newDraft.title,
-        author: currentUser?.name || newDraft.author,
-        category: newDraft.category,
-        status: 'Submitted for Review',
-        priority: newDraft.priority,
-        date: 'Just now',
-        reads: '0',
-        wordCount: newDraft.content.split(' ').length || 350
+    if (!newDraft.title.trim()) return;
+
+    const authorName = currentUser?.name || newDraft.author || 'Kelly Muthomi Kinoti';
+    const catSlug = newDraft.category.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    const createResult = await articleService.createArticle({
+      title: newDraft.title,
+      summary: newDraft.content.substring(0, 180) + '...',
+      content: newDraft.content,
+      category: (catSlug || 'politics') as any,
+      county: 'Nairobi',
+      imageUrl: newDraft.imagePreview || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
+      isBreaking: newDraft.priority === 'Breaking News',
+      isFeatured: true,
+      author: {
+        name: authorName,
+        role: currentUser?.role || 'Staff Journalist',
+        avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
       },
-      ...articlesList,
-    ]);
+      status: 'published'
+    });
+
+    if (createResult.article) {
+      setArticlesList([
+        {
+          id: createResult.article.id,
+          title: createResult.article.title,
+          author: createResult.article.author.name,
+          category: createResult.article.category,
+          status: 'Published',
+          priority: newDraft.priority,
+          date: 'Just now',
+          reads: '1.2k',
+          wordCount: newDraft.content.split(' ').length || 350
+        },
+        ...articlesList,
+      ]);
+    }
+
     setShowDraftModal(false);
     setNewDraft({
       title: '',
@@ -608,10 +681,22 @@ export const AdminCmsPortal: React.FC = () => {
       imagePreview: '',
       fileName: ''
     });
+
+    window.dispatchEvent(new Event('knews254_articles_updated'));
   };
 
-  const handleUpdateArticleStatus = (id: string, newStatus: string) => {
+  const handleUpdateArticleStatus = async (id: string, newStatus: string) => {
     setArticlesList(articlesList.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    
+    if (newStatus.toLowerCase().includes('publish') || newStatus === 'Approved') {
+      await articleService.publishArticle(id);
+    } else if (newStatus.toLowerCase().includes('delete') || newStatus === 'Archived') {
+      await articleService.softDeleteArticle(id);
+    } else {
+      await articleService.updateArticle(id, { status: newStatus.toLowerCase() as any });
+    }
+    
+    window.dispatchEvent(new Event('knews254_articles_updated'));
   };
 
   /* -------------------------------------------------------------------------- */

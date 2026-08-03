@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ArticleCard } from './components/ArticleCard';
 import { PrdViewer } from './components/PrdViewer';
@@ -15,6 +15,8 @@ import { SpecialtyPages } from './components/SpecialtyPages';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { FEATURED_ARTICLES } from './data/newsData';
 import { Article, NewsCategory } from './types';
+import { articleService } from './services/articleService';
+import { SeoManager } from './components/SeoManager';
 import { Flame, Sparkles, Clock, Eye, Sliders, ArrowRight, TrendingUp, ShieldCheck, Newspaper, Compass, Home, Building2, Vote, FileCheck, PhoneCall } from 'lucide-react';
 
 export default function App() {
@@ -22,23 +24,62 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<NewsCategory>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
+  const [articles, setArticles] = useState<Article[]>(FEATURED_ARTICLES);
   const [activeArticleForAi, setActiveArticleForAi] = useState<Article>(FEATURED_ARTICLES[0]);
   const [selectedArticleDetail, setSelectedArticleDetail] = useState<Article | null>(null);
   const [language, setLanguage] = useState<'en' | 'sw' | 'sheng'>('en');
   const [showAdminPortal, setShowAdminPortal] = useState(false);
 
+  // Sync Articles from articleService
+  const loadArticles = async () => {
+    try {
+      const fetched = await articleService.listPublishedArticles();
+      if (fetched && fetched.length > 0) {
+        setArticles(fetched);
+      }
+    } catch (err) {
+      console.warn('Error loading articles in App:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadArticles();
+
+    // Check query params for deep linking (article or category)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const articleParam = params.get('article') || params.get('id');
+      const catParam = params.get('cat') || params.get('category');
+      
+      if (catParam) {
+        setSelectedCategory(catParam as NewsCategory);
+      }
+
+      if (articleParam) {
+        articleService.getArticleBySlug(articleParam).then(art => {
+          if (art) setSelectedArticleDetail(art);
+        });
+      }
+    }
+
+    const handleArticlesUpdate = () => loadArticles();
+    window.addEventListener('knews254_articles_updated', handleArticlesUpdate);
+    return () => window.removeEventListener('knews254_articles_updated', handleArticlesUpdate);
+  }, []);
+
   // Filter Articles by search query
-  const searchFilteredArticles = FEATURED_ARTICLES.filter((art) => {
+  const searchFilteredArticles = articles.filter((art) => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       art.title.toLowerCase().includes(q) ||
       art.summary.toLowerCase().includes(q) ||
+      (art.county && art.county.toLowerCase().includes(q)) ||
       art.tags.some((t) => t.toLowerCase().includes(q))
     );
   });
 
-  const leadArticle = searchFilteredArticles[0] || FEATURED_ARTICLES[0];
+  const leadArticle = searchFilteredArticles[0] || articles[0] || FEATURED_ARTICLES[0];
   const secondaryArticles = searchFilteredArticles.slice(1, 5);
 
   const handleSelectCategory = (cat: NewsCategory) => {
@@ -74,6 +115,13 @@ export default function App() {
 
   return (
     <div className="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased flex flex-col selection:bg-red-600 selection:text-white">
+      {/* SEO Head & JSON-LD Meta Tag Manager */}
+      <SeoManager
+        category={selectedCategory}
+        article={selectedArticleDetail}
+        searchQuery={searchQuery}
+      />
+
       {/* Navigation Header */}
       <Header
         activeTab={activeTab}
@@ -121,7 +169,7 @@ export default function App() {
         ) : selectedCategory !== 'home' ? (
           <CategoryPage
             category={selectedCategory}
-            articles={FEATURED_ARTICLES}
+            articles={articles}
             onSelectArticle={(art) => setSelectedArticleDetail(art)}
             onSelectCategory={handleSelectCategory}
           />

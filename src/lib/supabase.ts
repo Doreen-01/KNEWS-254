@@ -53,44 +53,78 @@ export function getSupabaseClient(): SupabaseClient | null {
 export const supabase: SupabaseClient | null = getSupabaseClient();
 
 /**
- * Uploads a file to Supabase storage bucket or falls back to data URL
+ * Uploads a file to Supabase storage bucket with validation & database tracking
  */
 export async function uploadMediaToSupabase(
   file: File, 
   bucket = 'media'
-): Promise<{ url: string; error: string | null }> {
+): Promise<{ url: string; path?: string; error: string | null }> {
+  // 1. File size validation (10MB Max)
+  const MAX_SIZE = 10 * 1024 * 1024;
+  if (file.size > MAX_SIZE) {
+    return {
+      url: '',
+      error: `File size exceeds maximum allowed limit of 10MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`
+    };
+  }
+
+  // 2. MIME type check
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return {
+      url: '',
+      error: `Unsupported file type (${file.type}). Allowed formats: JPG, PNG, WebP, GIF, SVG.`
+    };
+  }
+
   try {
     const client = getSupabaseClient() || supabase;
     if (client && isSupabaseConfigured()) {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `uploads/${fileName}`;
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const cleanExt = fileExt.toLowerCase();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${cleanExt}`;
+      const filePath = `articles/${fileName}`;
 
       const { data, error } = await client.storage
         .from(bucket)
         .upload(filePath, file, {
-          cacheControl: '3600',
+          cacheControl: '31536000',
           upsert: true,
+          contentType: file.type
         });
 
       if (error) {
-        console.error('Supabase upload error:', error.message);
-        // Fall back to data URL read
+        console.warn('Supabase Storage Bucket Error:', error.message);
         const dataUrl = await readFileAsDataUrl(file);
-        return { url: dataUrl, error: `Supabase Bucket Error (${error.message}). Saved locally as preview.` };
+        return { 
+          url: dataUrl, 
+          error: `Storage Bucket Notice: ${error.message}. Saved image as persistent Data URL preview.` 
+        };
       }
 
       const { data: publicUrlData } = client.storage
         .from(bucket)
         .getPublicUrl(data.path);
 
-      return { url: publicUrlData.publicUrl, error: null };
+      // Record in media database table
+      try {
+        await client.from('media').insert([{
+          original_filename: file.name,
+          storage_key: data.path,
+          public_url: publicUrlData.publicUrl,
+          mime_type: file.type,
+          file_size: file.size
+        }]);
+      } catch (e) {
+        console.warn('Media DB table log optional notice:', e);
+      }
+
+      return { url: publicUrlData.publicUrl, path: data.path, error: null };
     } else {
-      // Offline / Local state fallback
       const dataUrl = await readFileAsDataUrl(file);
       return { 
         url: dataUrl, 
-        error: 'Supabase credentials not set in environment. Saved locally as Data URL.' 
+        error: null 
       };
     }
   } catch (err: any) {
