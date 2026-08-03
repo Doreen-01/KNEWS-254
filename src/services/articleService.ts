@@ -423,5 +423,91 @@ export const articleService = {
       }
     }
     return true;
+  },
+
+  /**
+   * Record Article View in Analytics
+   */
+  async recordView(id: string): Promise<void> {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        // Find UUID if possible
+        let uuid = id;
+        if (!id.includes('-')) {
+          const { data } = await supabase.from('articles').select('id').or(`slug.eq.${id},id.eq.${id}`).maybeSingle();
+          if (data) uuid = data.id;
+        }
+        await supabase.from('article_views').insert({
+          article_id: uuid,
+          viewed_at: new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn('Record view warning:', e);
+      }
+    }
+  },
+
+  /**
+   * Get Comments for an Article
+   */
+  async getComments(articleId: string): Promise<{ id: string; name: string; text: string; date: string; likes: number }[]> {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        let uuid = articleId;
+        if (!articleId.includes('-')) {
+          const { data } = await supabase.from('articles').select('id').or(`slug.eq.${articleId},id.eq.${articleId}`).maybeSingle();
+          if (data) uuid = data.id;
+        }
+        const { data, error } = await supabase
+          .from('comments')
+          .select('*')
+          .eq('article_id', uuid)
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          return data.map(c => ({
+            id: c.id,
+            name: c.name || c.author_name || 'Anonymous Reader',
+            text: c.content,
+            date: new Date(c.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+            likes: c.likes_count || 1
+          }));
+        }
+      } catch (e) {
+        console.warn('Get comments warning:', e);
+      }
+    }
+    return [];
+  },
+
+  /**
+   * Submit Comment for an Article
+   */
+  async submitComment(articleId: string, name: string, content: string): Promise<boolean> {
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        let uuid = articleId;
+        if (!articleId.includes('-')) {
+          const { data } = await supabase.from('articles').select('id').or(`slug.eq.${articleId},id.eq.${articleId}`).maybeSingle();
+          if (data) uuid = data.id;
+        }
+        const { error } = await supabase.from('comments').insert({
+          article_id: uuid,
+          name: name.trim() || 'Anonymous Reader',
+          content: content.trim(),
+          status: 'pending'
+        });
+        if (error) {
+          console.error('Submit comment error:', error);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        console.error('Submit comment error:', e);
+        return false;
+      }
+    }
+    return true;
   }
 };

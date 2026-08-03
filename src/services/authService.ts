@@ -4,6 +4,7 @@ export type UserRole =
   | 'super_admin'
   | 'managing_editor'
   | 'editor'
+  | 'editor_in_chief'
   | 'journalist'
   | 'correspondent'
   | 'fact_checker'
@@ -11,6 +12,10 @@ export type UserRole =
   | 'social_media_manager'
   | 'hr_manager'
   | 'support_officer'
+  | 'legal_reviewer'
+  | 'community_moderator'
+  | 'advertising_manager'
+  | 'customer_support'
   | 'analyst';
 
 export interface UserProfile {
@@ -72,16 +77,35 @@ export const authService = {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          const { data, error } = await supabase
+          // 1. Try querying by auth_user_id
+          let { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('auth_user_id', session.user.id)
-            .single();
+            .maybeSingle();
 
-          if (!error && data) {
+          // 2. If not found, try querying by email
+          if (!data && session.user.email) {
+            const emailQuery = await supabase
+              .from('profiles')
+              .select('*')
+              .ilike('email', session.user.email)
+              .maybeSingle();
+            
+            if (emailQuery.data) {
+              data = emailQuery.data;
+              // Link auth_user_id
+              await supabase
+                .from('profiles')
+                .update({ auth_user_id: session.user.id })
+                .eq('id', data.id);
+            }
+          }
+
+          if (data) {
             const mapped: UserProfile = {
               id: data.id,
-              auth_user_id: data.auth_user_id,
+              auth_user_id: session.user.id,
               name: data.name || session.user.email?.split('@')[0] || 'Knews254 Staff',
               email: data.email || session.user.email || '',
               role: (data.role || 'journalist') as UserRole,

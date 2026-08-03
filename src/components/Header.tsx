@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Clock,
   Sun,
+  Moon,
   Bell,
   Command,
   SlidersHorizontal,
@@ -67,6 +68,34 @@ export const Header: React.FC<HeaderProps> = ({
   const [tickerIndex, setTickerIndex] = useState(0);
   const [hasNotifications, setHasNotifications] = useState(true);
   const [showSavedNotification, setShowSavedNotification] = useState(false);
+
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('knews254_theme') || localStorage.getItem('theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.classList.remove('dark');
+      root.classList.add('light');
+      localStorage.setItem('knews254_theme', 'light');
+      localStorage.setItem('theme', 'light');
+    } else {
+      root.classList.remove('light');
+      root.classList.add('dark');
+      localStorage.setItem('knews254_theme', 'dark');
+      localStorage.setItem('theme', 'dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const breakingNewsHeadlines = [
     'Infotrak Governance Audit: Edwin Sifuna approval surges to 42.5% as public tracks SHIF & economic policy debates',
@@ -386,6 +415,20 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Action Center: Admin CMS, AI Assistant, Alerts & Workspace Switcher */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Global Theme Toggle (Light / Dark Mode) */}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 sm:p-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-xl transition relative flex items-center justify-center shadow-sm"
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+            aria-label="Toggle Global Theme Mode"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
+            )}
+          </button>
+
           {/* Breaking Alerts Bell */}
           <button
             onClick={() => setHasNotifications(!hasNotifications)}
@@ -566,8 +609,8 @@ export const Header: React.FC<HeaderProps> = ({
             />
           </div>
 
-          {/* Quick AI & CMS buttons for Mobile */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          {/* Quick AI, CMS & Theme buttons for Mobile */}
+          <div className="grid grid-cols-3 gap-2 text-xs">
             <button
               onClick={() => {
                 onOpenAiAssistant();
@@ -576,7 +619,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-600 to-amber-600 text-white font-bold p-2 rounded-xl"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              AI News Desk
+              <span>AI Desk</span>
             </button>
             <button
               onClick={() => {
@@ -586,7 +629,16 @@ export const Header: React.FC<HeaderProps> = ({
               className="flex items-center justify-center gap-1.5 bg-slate-900 text-red-400 border border-red-500/30 font-bold p-2 rounded-xl"
             >
               <FileCheck className="w-3.5 h-3.5" />
-              CMS Admin
+              <span>CMS</span>
+            </button>
+            <button
+              onClick={() => {
+                toggleTheme();
+              }}
+              className="flex items-center justify-center gap-1.5 bg-slate-900 text-slate-200 border border-slate-800 font-bold p-2 rounded-xl"
+            >
+              {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-400" />}
+              <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
             </button>
           </div>
 

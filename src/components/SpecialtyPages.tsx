@@ -22,6 +22,7 @@ import {
 import { NewsCategory, Author, GalleryAlbum, JobListing } from '../types';
 import { AUTHORS_LIST, GALLERY_ALBUMS, JOB_LISTINGS } from '../data/newsData';
 import { KmkLogo } from './KmkLogo';
+import { supabase } from '../lib/supabase';
 
 interface SpecialtyPagesProps {
   category: NewsCategory;
@@ -77,6 +78,20 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactData.name || !contactData.email || !contactData.message) return;
+
+    if (supabase) {
+      try {
+        await supabase.from('contact_messages').insert({
+          name: contactData.name,
+          email: contactData.email,
+          subject: contactData.subject || 'General Inquiry',
+          message: contactData.message,
+          status: 'unread'
+        });
+      } catch (err) {
+        console.warn('Supabase contact message error:', err);
+      }
+    }
 
     try {
       await fetch('/api/contact', {
@@ -1134,8 +1149,23 @@ const CareersPage: React.FC = () => {
   const [applied, setApplied] = useState(false);
   const [appForm, setAppForm] = useState({ name: '', email: '', phone: '', portfolio: '', cover: '', cvName: '' });
 
-  const handleApply = (e: React.FormEvent) => {
+  const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (supabase) {
+      try {
+        await supabase.from('vetting_requests').insert({
+          name: appForm.name,
+          email: appForm.email,
+          phone: appForm.phone,
+          position: selectedJob?.title || 'General Newsroom Application',
+          portfolio_url: appForm.portfolio,
+          cover_letter: appForm.cover,
+          status: 'pending'
+        });
+      } catch (err) {
+        console.warn('Supabase career vetting insert error:', err);
+      }
+    }
     setApplied(true);
   };
 

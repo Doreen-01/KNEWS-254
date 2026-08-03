@@ -24,6 +24,7 @@ import {
   Newspaper
 } from 'lucide-react';
 import { NewsCategory } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface FooterProps {
   onSelectCategory?: (category: NewsCategory) => void;
@@ -70,6 +71,17 @@ export const Footer: React.FC<FooterProps> = ({
     e.preventDefault();
     if (!email) return;
     
+    if (supabase) {
+      try {
+        await supabase.from('newsletter_subscribers').insert({
+          email: email.trim(),
+          is_active: true
+        });
+      } catch (err) {
+        console.warn('Supabase newsletter subscribe error:', err);
+      }
+    }
+
     try {
       await fetch('/api/subscribe', {
         method: 'POST',

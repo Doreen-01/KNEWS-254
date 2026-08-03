@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Share2, 
@@ -18,6 +18,7 @@ import {
   Languages
 } from 'lucide-react';
 import { Article, NewsCategory } from '../types';
+import { articleService } from '../services/articleService';
 
 interface ArticleDetailModalProps {
   article: Article | null;
@@ -43,6 +44,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   const [isTranslating, setIsTranslating] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+  const [commentSubmittedNotice, setCommentSubmittedNotice] = useState(false);
 
   // Comment system state
   const [comments, setComments] = useState<{ id: string; name: string; text: string; date: string; likes: number }[]>([
@@ -63,6 +65,20 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   ]);
   const [newCommentName, setNewCommentName] = useState('');
   const [newCommentText, setNewCommentText] = useState('');
+
+  useEffect(() => {
+    if (article?.id) {
+      // 1. Record view in Supabase analytics
+      articleService.recordView(article.id);
+
+      // 2. Fetch approved comments from Supabase
+      articleService.getComments(article.id).then((fetched) => {
+        if (fetched && fetched.length > 0) {
+          setComments(fetched);
+        }
+      });
+    }
+  }, [article?.id]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -108,19 +124,28 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
     }
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newCommentText.trim()) {
+    if (newCommentText.trim() && article) {
+      const name = newCommentName.trim() || 'Anonymous Reader';
+      const text = newCommentText.trim();
+
       const newC = {
         id: `c-${Date.now()}`,
-        name: newCommentName.trim() || 'Anonymous Reader',
-        text: newCommentText.trim(),
-        date: 'Just now',
+        name,
+        text,
+        date: 'Just now (Pending Approval)',
         likes: 1,
       };
+      
       setComments([newC, ...comments]);
       setNewCommentName('');
       setNewCommentText('');
+      setCommentSubmittedNotice(true);
+      setTimeout(() => setCommentSubmittedNotice(false), 5000);
+
+      // Submit to Supabase
+      await articleService.submitComment(article.id, name, text);
     }
   };
 
@@ -408,6 +433,13 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
             </div>
 
             {/* Comment Form */}
+            {commentSubmittedNotice && (
+              <div className="bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs p-3 rounded-xl flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Thank you! Your comment has been submitted to Supabase and is pending editorial moderation before appearing publicly.</span>
+              </div>
+            )}
+
             <form onSubmit={handleAddComment} className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
