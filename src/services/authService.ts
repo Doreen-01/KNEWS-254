@@ -31,167 +31,150 @@ export interface UserProfile {
   created_at?: string;
 }
 
-const PROFILE_STORAGE_KEY = 'knews254_staff_profile_v1';
-
-const DEFAULT_PROFILE: UserProfile = {
-  id: 'usr-001',
-  name: 'Kelly Muthomi Kinoti',
-  email: 'kellymuthomi22@gmail.com',
-  role: 'super_admin',
-  status: 'ACTIVE',
-  profile_image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-  department: 'Executive Bureau & Chief Tech Office',
-  biography: 'Executive Chairman & Chief Architect of Knews254 Digital Media Network.'
-};
-
-export function getStoredProfile(): UserProfile {
-  if (typeof window === 'undefined') return DEFAULT_PROFILE;
-  try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(DEFAULT_PROFILE));
-      return DEFAULT_PROFILE;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return DEFAULT_PROFILE;
-  }
-}
-
-export function saveStoredProfile(profile: UserProfile): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-    window.dispatchEvent(new Event('knews254_profile_updated'));
-  } catch (e) {
-    console.error('Failed to save profile locally:', e);
-  }
-}
-
 export const authService = {
   /**
-   * Get current active user profile
+   * Get current authenticated user profile from Supabase Auth + public.profiles
    */
-  async getCurrentProfile(): Promise<UserProfile> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          // 1. Try querying by auth_user_id
-          let { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('auth_user_id', session.user.id)
-            .maybeSingle();
-
-          // 2. If not found, try querying by email
-          if (!data && session.user.email) {
-            const emailQuery = await supabase
-              .from('profiles')
-              .select('*')
-              .ilike('email', session.user.email)
-              .maybeSingle();
-            
-            if (emailQuery.data) {
-              data = emailQuery.data;
-              // Link auth_user_id
-              await supabase
-                .from('profiles')
-                .update({ auth_user_id: session.user.id })
-                .eq('id', data.id);
-            }
-          }
-
-          if (data) {
-            const mapped: UserProfile = {
-              id: data.id,
-              auth_user_id: session.user.id,
-              name: data.name || session.user.email?.split('@')[0] || 'Knews254 Staff',
-              email: data.email || session.user.email || '',
-              role: (data.role || 'journalist') as UserRole,
-              status: data.status || 'ACTIVE',
-              profile_image: data.profile_image || getStoredProfile().profile_image,
-              department: data.department || 'Editorial Desk',
-              biography: data.biography || ''
-            };
-            saveStoredProfile(mapped);
-            return mapped;
-          }
-        }
-      } catch (err) {
-        console.warn('Supabase auth session check failed:', err);
-      }
+  async getCurrentProfile(): Promise<UserProfile | null> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return null;
     }
 
-    return getStoredProfile();
-  },
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session?.user) {
+        return null;
+      }
 
-  /**
-   * Update Profile (including Profile Picture!)
-   */
-  async updateProfile(updates: Partial<UserProfile>): Promise<{ success: boolean; profile: UserProfile; error?: string }> {
-    const current = getStoredProfile();
-    const updated: UserProfile = {
-      ...current,
-      ...updates
-    };
+      const userId = session.user.id;
+      const userEmail = session.user.email || '';
 
-    saveStoredProfile(updated);
+      // 1. Query public.profiles by auth_user_id
+      let { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
 
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase
+      // 2. If not found by auth_user_id, match by email
+      if (!profile && userEmail) {
+        const emailQuery = await supabase
           .from('profiles')
-          .upsert({
-            id: updated.id,
-            name: updated.name,
-            email: updated.email,
-            role: updated.role,
-            profile_image: updated.profile_image,
-            department: updated.department,
-            biography: updated.biography
-          });
-      } catch (err: any) {
-        console.warn('Supabase profile update warning:', err);
+          .select('*')
+          .ilike('email', userEmail)
+          .maybeSingle();
+        
+        if (emailQuery.data) {
+          profile = emailQuery.data;
+          // Link auth_user_id to profile row
+          await supabase
+            .from('profiles')
+            .update({ auth_user_id: userId })
+            .eq('id', profile.id);
+        }
       }
-    }
 
-    return { success: true, profile: updated };
+      if (profile) {
+        return {
+          id: profile.id,
+          auth_user_id: userId,
+          name: profile.name || userEmail.split('@')[0] || 'Knews254 Staff',
+          email: profile.email || userEmail,
+          role: (profile.role || 'journalist') as UserRole,
+          status: profile.status || 'ACTIVE',
+          profile_image: profile.profile_image || '',
+          department: profile.department || 'Newsroom Operations',
+          biography: profile.biography || ''
+        };
+      }
+
+      // If user is authenticated in Supabase Auth but has no profiles row yet, return fallback derived from auth session
+      return {
+        id: userId,
+        auth_user_id: userId,
+        name: userEmail.split('@')[0] || 'Knews254 Staff',
+        email: userEmail,
+        role: 'journalist',
+        status: 'ACTIVE',
+        department: 'Newsroom Operations',
+        biography: ''
+      };
+    } catch (err) {
+      console.error('Supabase auth session check error:', err);
+      return null;
+    }
   },
 
   /**
-   * Login using Supabase Auth or Local Demo Mode
+   * Update Profile in public.profiles table
    */
-  async login(email: string, pass: string): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password: pass
+  async updateProfile(updates: Partial<UserProfile>): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase backend is not configured.' };
+    }
+
+    try {
+      const current = await this.getCurrentProfile();
+      if (!current) {
+        return { success: false, error: 'Not authenticated.' };
+      }
+
+      const updated: UserProfile = { ...current, ...updates };
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: updated.id,
+          auth_user_id: updated.auth_user_id,
+          name: updated.name,
+          email: updated.email,
+          role: updated.role,
+          profile_image: updated.profile_image,
+          department: updated.department,
+          biography: updated.biography
         });
 
-        if (error) {
-          return { success: false, error: error.message };
-        }
-
-        if (data.user) {
-          const profile = await this.getCurrentProfile();
-          return { success: true, profile };
-        }
-      } catch (err: any) {
-        console.warn('Supabase auth error:', err);
+      if (error) {
+        return { success: false, error: error.message };
       }
-    }
 
-    // Default staff login
-    const localProfile = getStoredProfile();
-    localProfile.email = email;
-    saveStoredProfile(localProfile);
-    return { success: true, profile: localProfile };
+      return { success: true, profile: updated };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update profile.' };
+    }
   },
 
   /**
-   * Logout
+   * Login strictly using Supabase Authentication (signInWithPassword)
+   */
+  async login(email: string, pass: string): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase credentials are required for authentication.' };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: pass
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.user) {
+        const profile = await this.getCurrentProfile();
+        return { success: true, profile: profile || undefined };
+      }
+
+      return { success: false, error: 'Login failed to establish a session.' };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Authentication system error.' };
+    }
+  },
+
+  /**
+   * Logout from Supabase Auth session
    */
   async logout(): Promise<void> {
     if (isSupabaseConfigured() && supabase) {
@@ -201,6 +184,12 @@ export const authService = {
         console.error('Signout error:', e);
       }
     }
+    // Clear any lingering session keys
+    localStorage.removeItem('knews254_staff_session');
+    localStorage.removeItem('knews254_superadmin_auth');
+    localStorage.removeItem('knews254_staff_list');
+    localStorage.removeItem('knews254_staff_profile_v1');
     localStorage.removeItem('knews254_auth_token');
   }
 };
+

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { KmkLogo } from './KmkLogo';
 import { DoreenPhoto } from './DoreenPhoto';
-import { uploadMediaToSupabase, isSupabaseConfigured } from '../lib/supabase';
+import { uploadMediaToSupabase, isSupabaseConfigured, supabase } from '../lib/supabase';
 import { articleService } from '../services/articleService';
-import { authService } from '../services/authService';
+import { authService, UserProfile } from '../services/authService';
 import { AUTHORS_LIST } from '../data/newsData';
 import {
   Sliders,
@@ -65,14 +65,11 @@ interface StaffUser {
   isChiefAdmin: boolean;
   isCustomPhoto?: boolean;
   avatar?: string;
-  securityCode: string;
-  passwordHash: string;
-  passwordStatus: 'ACTIVE_ENCRYPTED' | 'PENDING_SET' | 'RESET_REQUIRED';
   lastLogin: string;
 }
 
 export const AdminCmsPortal: React.FC = () => {
-  // Default Vetted Newsroom Staff Members
+  // Default Vetted Newsroom Staff Members (Directory Only)
   const DEFAULT_STAFF: StaffUser[] = [
     {
       id: 'staff-001',
@@ -82,9 +79,6 @@ export const AdminCmsPortal: React.FC = () => {
       department: 'Executive Governance & Engineering',
       clearanceLevel: 'LEVEL 4 SUPREME',
       isChiefAdmin: true,
-      securityCode: 'KMK-990-SUPREME',
-      passwordHash: '•••••••••••• (54555455Km.@)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: 'Active Now'
     },
     {
@@ -96,9 +90,6 @@ export const AdminCmsPortal: React.FC = () => {
       clearanceLevel: 'LEVEL 2 SUPPORT',
       isChiefAdmin: false,
       isCustomPhoto: true,
-      securityCode: 'DNN-204-SUPPORT',
-      passwordHash: '•••••••••••• (Support2026@Knews)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: '2 mins ago'
     },
     {
@@ -109,9 +100,6 @@ export const AdminCmsPortal: React.FC = () => {
       department: 'Executive Editorial & Community Governance Desk',
       clearanceLevel: 'LEVEL 3 CHIEF EDITOR & MODERATOR',
       isChiefAdmin: false,
-      securityCode: 'MMW-101-EIC',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: 'Just Now'
     },
     {
@@ -122,9 +110,6 @@ export const AdminCmsPortal: React.FC = () => {
       department: 'Managing Editorial & Fact Check Verification Desk',
       clearanceLevel: 'LEVEL 3 MANAGING EDITOR & VERIFICATION',
       isChiefAdmin: false,
-      securityCode: 'AMW-505-MNG-ED',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: '10 mins ago'
     },
     {
@@ -135,9 +120,6 @@ export const AdminCmsPortal: React.FC = () => {
       department: 'Legal & Regulatory Compliance Desk',
       clearanceLevel: 'LEVEL 3 LEGAL',
       isChiefAdmin: false,
-      securityCode: 'LKW-707-LEGAL',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: '15 mins ago'
     },
     {
@@ -148,9 +130,6 @@ export const AdminCmsPortal: React.FC = () => {
       department: 'HR & Personnel Operations Desk',
       clearanceLevel: 'LEVEL 3 HR MANAGEMENT',
       isChiefAdmin: false,
-      securityCode: 'JMW-808-HR',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: '1 hr ago'
     },
     {
@@ -161,21 +140,11 @@ export const AdminCmsPortal: React.FC = () => {
       department: 'Advertising & Newsroom Bureau Operations (Leads All Reporters)',
       clearanceLevel: 'LEVEL 3 CHIEF REPORTER & ADVERTISING',
       isChiefAdmin: false,
-      securityCode: 'SKW-909-CHIEF-REP',
-      passwordHash: '•••••••••••• (Encrypted Hash)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
       lastLogin: '5 mins ago'
     }
   ];
 
-  // Registered Vetted Staff Database & Password Vault (Persisted in localStorage)
-  const [staffList, setStaffList] = useState<StaffUser[]>(() => {
-    const saved = localStorage.getItem('knews254_staff_list');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { }
-    }
-    return DEFAULT_STAFF;
-  });
+  const [staffList] = useState<StaffUser[]>(DEFAULT_STAFF);
 
   // Newsroom Vetting & Accreditation Applicants Queue
   const [vettingQueue, setVettingQueue] = useState(() => {
@@ -275,25 +244,6 @@ export const AdminCmsPortal: React.FC = () => {
     const cand = vettingQueue.find(q => q.id === candId);
     if (!cand) return;
 
-    // Create accredited StaffUser
-    const newStaffUser: StaffUser = {
-      id: `staff-${Date.now().toString().slice(-4)}`,
-      name: cand.name,
-      email: cand.email,
-      role: cand.role,
-      department: cand.department,
-      clearanceLevel: 'LEVEL 2 VETTED JOURNALIST & PODCASTER',
-      isChiefAdmin: false,
-      securityCode: `${cand.name.substring(0, 3).toUpperCase()}-VETTED-CMS`,
-      passwordHash: '•••••••••••• (67086708Km.)',
-      passwordStatus: 'ACTIVE_ENCRYPTED',
-      lastLogin: 'Vetted & Approved Just Now'
-    };
-
-    const updatedStaffList = [...staffList, newStaffUser];
-    setStaffList(updatedStaffList);
-    localStorage.setItem('knews254_staff_list', JSON.stringify(updatedStaffList));
-
     const updatedQueue = vettingQueue.map(q => q.id === candId ? { ...q, status: 'VETTED_APPROVED' } : q);
     setVettingQueue(updatedQueue);
     localStorage.setItem('knews254_vetting_queue', JSON.stringify(updatedQueue));
@@ -301,29 +251,51 @@ export const AdminCmsPortal: React.FC = () => {
     alert(`✓ [VETTING SUCCESS] ${cand.name} has been vetted & accredited by Executive Command! They can now log into the CMS using ${cand.email}.`);
   };
 
-  // Authenticated Session State
-  const [currentUser, setCurrentUser] = useState<StaffUser | null>(() => {
-    const saved = localStorage.getItem('knews254_staff_session');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return null; }
+  // Authenticated Supabase Session State
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function restoreSession() {
+      setIsLoadingAuth(true);
+      const profile = await authService.getCurrentProfile();
+      if (active) {
+        setCurrentUserProfile(profile);
+        setIsLoadingAuth(false);
+      }
     }
-    if (localStorage.getItem('knews254_superadmin_auth') === 'true') {
-      return {
-        id: 'staff-001',
-        name: 'Kelly Muthomi Kinoti',
-        email: 'kellymuthomi22@gmail.com',
-        role: 'Chief Administrator & Chairman',
-        department: 'Executive Governance & Engineering',
-        clearanceLevel: 'LEVEL 4 SUPREME',
-        isChiefAdmin: true,
-        securityCode: 'KMK-990-SUPREME',
-        passwordHash: '••••••••••••',
-        passwordStatus: 'ACTIVE_ENCRYPTED',
-        lastLogin: 'Active Now'
+    restoreSession();
+
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          const profile = await authService.getCurrentProfile();
+          if (active) setCurrentUserProfile(profile);
+        } else if (event === 'SIGNED_OUT') {
+          if (active) setCurrentUserProfile(null);
+        }
+      });
+      return () => {
+        active = false;
+        subscription.unsubscribe();
       };
     }
-    return null;
-  });
+  }, []);
+
+  // Map user profile to StaffUser representation for UI compatibility
+  const currentUser: StaffUser | null = currentUserProfile ? {
+    id: currentUserProfile.id,
+    name: currentUserProfile.name,
+    email: currentUserProfile.email,
+    role: currentUserProfile.role,
+    department: currentUserProfile.department || 'Newsroom Operations',
+    clearanceLevel: currentUserProfile.role === 'super_admin' ? 'LEVEL 4 SUPREME' : 'LEVEL 3 AUTHENTICATED',
+    isChiefAdmin: currentUserProfile.role === 'super_admin' || currentUserProfile.email.toLowerCase().includes('kellymuthomi'),
+    isCustomPhoto: !!currentUserProfile.profile_image,
+    avatar: currentUserProfile.profile_image,
+    lastLogin: 'Active Session'
+  } : null;
 
   const isAuthenticated = !!currentUser;
 
@@ -333,67 +305,32 @@ export const AdminCmsPortal: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setIsLoggingIn(true);
 
     const emailTrim = loginEmail.trim().toLowerCase();
 
-    setTimeout(() => {
-      // Verify password (67086708Km. or master passwords)
-      const isPassValid = (
-        loginPassword === '67086708Km.' ||
-        loginPassword === '54555455Km.@' ||
-        loginPassword === 'Support2026@Knews' ||
-        loginPassword.length >= 4
-      );
-
-      if (!isPassValid) {
-        setLoginError('Access Denied: Invalid security password provided.');
-        setIsLoggingIn(false);
-        return;
-      }
-
-      // Check against accredited staffList (includes all vetted staff approved by Super Admin / Chairman)
-      const matchStaff = staffList.find(s => {
-        const e = s.email.toLowerCase();
-        if (e === emailTrim) return true;
-        if (s.name.toLowerCase().includes('kelly') && (emailTrim.includes('kellymuthomi') || emailTrim.includes('kelly'))) return true;
-        if (s.name.toLowerCase().includes('doreen') && (emailTrim.includes('doreenngugi') || emailTrim.includes('doreen'))) return true;
-        if (s.name.toLowerCase().includes('alfred') && (emailTrim.includes('alfredmwenda') || emailTrim.includes('alfred.mwenda'))) return true;
-        if (s.name.toLowerCase().includes('linah') && (emailTrim.includes('linahkawira') || emailTrim.includes('linah.kawira'))) return true;
-        if (s.name.toLowerCase().includes('muchui') && (emailTrim.includes('muchuidk') || emailTrim.includes('muchui.dk'))) return true;
-        if (s.name.toLowerCase().includes('scholastica') && (emailTrim.includes('scholastica') || emailTrim.includes('karwitha'))) return true;
-        return false;
-      });
-
-      if (matchStaff) {
-        setCurrentUser(matchStaff);
-        localStorage.setItem('knews254_staff_session', JSON.stringify(matchStaff));
-        if (matchStaff.isChiefAdmin) {
-          localStorage.setItem('knews254_superadmin_auth', 'true');
-        }
-        setIsLoggingIn(false);
-        setLoginError('');
-        return;
-      }
-
-      // Check if candidate has submitted vetting request
-      const pendingVet = vettingQueue.find(v => v.email.toLowerCase() === emailTrim);
-      if (pendingVet) {
-        setLoginError(`Access Restricted: Your vetting application (${pendingVet.name}) is currently under review by Chairman Kelly Muthomi Kinoti & Editor-in-Chief Muchui Mwirigi. You will be able to log in as soon as executive approval is granted.`);
-      } else {
-        setLoginError(`Access Denied: Registered staff email address not found among accredited newsroom personnel. If you are a staff member or podcast host, click "Request Staff Accreditation & Vetting" below.`);
-      }
+    const res = await authService.login(emailTrim, loginPassword);
+    if (!res.success) {
+      setLoginError(res.error || 'Access Denied: Invalid credentials or password.');
       setIsLoggingIn(false);
-    }, 450);
+      return;
+    }
+
+    const profile = await authService.getCurrentProfile();
+    setCurrentUserProfile(profile);
+    setIsLoggingIn(false);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('knews254_staff_session');
-    localStorage.removeItem('knews254_superadmin_auth');
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (e) {
+      console.warn('Logout error:', e);
+    }
+    setCurrentUserProfile(null);
     setLoginPassword('');
     setLoginError('');
   };
@@ -403,7 +340,7 @@ export const AdminCmsPortal: React.FC = () => {
 
   // Active portal tab
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'vault' | 'profile' | 'editorial' | 'factcheck' | 'hr' | 'support' | 'reviews' | 'corrections' | 'chat_rota' | 'audit_logs' | 'infrastructure'
+    'overview' | 'profile' | 'editorial' | 'factcheck' | 'hr' | 'support' | 'reviews' | 'corrections' | 'chat_rota' | 'audit_logs' | 'infrastructure'
   >('overview');
 
   // Staff Profile Editing State
@@ -429,19 +366,6 @@ export const AdminCmsPortal: React.FC = () => {
   const [profileSaveSuccess, setProfileSaveSuccess] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<string | null>(null);
 
-  // Supabase Local Configuration Manager State
-  const [supabaseUrlInput, setSupabaseUrlInput] = useState(() => localStorage.getItem('knews254_supabase_url') || (import.meta as any).env?.VITE_SUPABASE_URL || 'https://jplxdzfyaxpbrnpnbcug.supabase.co');
-  const [supabaseKeyInput, setSupabaseKeyInput] = useState(() => localStorage.getItem('knews254_supabase_key') || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'sb_publishable_XGBm-0k-2bC-6bVUIEdJ7Q_k-lx4hjY');
-  const [supabaseSavedSuccess, setSupabaseSavedSuccess] = useState(false);
-
-  const handleSaveSupabaseConfig = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('knews254_supabase_url', supabaseUrlInput);
-    localStorage.setItem('knews254_supabase_key', supabaseKeyInput);
-    setSupabaseSavedSuccess(true);
-    setTimeout(() => setSupabaseSavedSuccess(false), 3000);
-  };
-
   const handleProfileAvatarUpload = async (file: File) => {
     if (!file) return;
     setProfileUploading(true);
@@ -454,39 +378,17 @@ export const AdminCmsPortal: React.FC = () => {
       setProfileData(prev => ({ ...prev, avatar: newAvatarUrl }));
       setUploadMessage(result.error ? `Notice: ${result.error}` : '✓ Profile picture uploaded successfully and saved to profile!');
 
-      // Instantly persist avatar to currentUser & auth service
-      if (currentUser) {
-        const updatedUser: StaffUser = {
-          ...currentUser,
-          avatar: newAvatarUrl,
-          isCustomPhoto: true
-        };
-        setCurrentUser(updatedUser);
-        localStorage.setItem('knews254_staff_session', JSON.stringify(updatedUser));
+      if (currentUserProfile) {
         authService.updateProfile({ profile_image: newAvatarUrl });
       }
     }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!currentUserProfile) return;
 
-    const updatedUser: StaffUser = {
-      ...currentUser,
-      name: profileData.name,
-      role: profileData.role,
-      email: profileData.email,
-      department: profileData.department,
-      avatar: profileData.avatar,
-      isCustomPhoto: true
-    };
-
-    setCurrentUser(updatedUser);
-    localStorage.setItem('knews254_staff_session', JSON.stringify(updatedUser));
-
-    // Save to auth service
-    authService.updateProfile({
+    await authService.updateProfile({
       name: profileData.name,
       email: profileData.email,
       department: profileData.department,
@@ -494,42 +396,8 @@ export const AdminCmsPortal: React.FC = () => {
       biography: profileData.bio
     });
 
-    // Update staffList state & localStorage
-    const updatedStaffList = staffList.map(s => s.id === currentUser.id ? updatedUser : s);
-    setStaffList(updatedStaffList);
-    localStorage.setItem('knews254_staff_list', JSON.stringify(updatedStaffList));
-
-    // Sync with AUTHORS_LIST in localStorage for public pages
-    const savedAuthors = localStorage.getItem('knews254_authors_list');
-    let currentAuthors = savedAuthors ? JSON.parse(savedAuthors) : AUTHORS_LIST;
-    const existingIdx = currentAuthors.findIndex((a: any) => 
-      a.email.toLowerCase() === currentUser.email.toLowerCase() || 
-      a.name.toLowerCase() === currentUser.name.toLowerCase()
-    );
-
-    const authorObj = {
-      id: `auth-${currentUser.id}`,
-      name: profileData.name,
-      role: profileData.role,
-      bio: profileData.bio,
-      avatar: profileData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
-      email: profileData.email,
-      twitter: profileData.twitter,
-      website: profileData.website,
-      location: profileData.location,
-      articlesCount: 154,
-      featuredBeats: ['politics', 'investigations', 'technology', 'governance']
-    };
-
-    if (existingIdx >= 0) {
-      currentAuthors[existingIdx] = { ...currentAuthors[existingIdx], ...authorObj };
-    } else {
-      currentAuthors.unshift(authorObj);
-    }
-
-    localStorage.setItem('knews254_authors_list', JSON.stringify(currentAuthors));
-    window.dispatchEvent(new Event('storage'));
-
+    const refreshed = await authService.getCurrentProfile();
+    setCurrentUserProfile(refreshed);
     setProfileSaveSuccess(true);
     setTimeout(() => setProfileSaveSuccess(false), 4500);
   };
@@ -579,14 +447,14 @@ export const AdminCmsPortal: React.FC = () => {
   /* -------------------------------------------------------------------------- */
   /* EDITORIAL QUEUE & DRAFT STUDIO STATE                                       */
   /* -------------------------------------------------------------------------- */
-  const [articlesList, setArticlesList] = useState([
-    { id: 'art-101', title: 'Nairobi Transport Revamp: Unified Bus Rapid Transit Bidding Opens', author: 'Mary Wambui', category: 'Infrastructure', status: 'Pending Legal Review', priority: 'High', date: '12 mins ago', reads: '14.2k', wordCount: 1240 },
-    { id: 'art-102', title: 'Kisumu Port Cargo Barges Expand to Entebbe & Jinja Routes', author: 'Amina Hassan', category: 'Economy', status: 'Fact-Check Approved', priority: 'Medium', date: '28 mins ago', reads: '9.8k', wordCount: 950 },
-    { id: 'art-103', title: 'Special Investigative Report: Climate-Resilient Maize Varieties Boost Kitale Yields', author: 'Ezekiel Kiprono', category: 'Agriculture', status: 'Drafting In Progress', priority: 'Normal', date: '1 hr ago', reads: '4.1k', wordCount: 1820 },
-    { id: 'art-104', title: 'Central Bank Holds Interest Rates at 12.0% amid Inflation Stability', author: 'David Ochieng', category: 'Business', status: 'Published', priority: 'High', date: '3 hrs ago', reads: '32.5k', wordCount: 1100 },
-  ]);
+  const [articlesList, setArticlesList] = useState<any[]>([]);
+  const [isLoadingCmsArticles, setIsLoadingCmsArticles] = useState(false);
+  const [cmsArticlesError, setCmsArticlesError] = useState<string | null>(null);
 
   const [showDraftModal, setShowDraftModal] = useState(false);
+  const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+
   const [newDraft, setNewDraft] = useState({
     title: '',
     category: 'Politics',
@@ -594,33 +462,49 @@ export const AdminCmsPortal: React.FC = () => {
     content: '',
     priority: 'Normal',
     imagePreview: '',
-    fileName: ''
+    fileName: '',
+    targetStatus: 'published'
   });
 
-  useEffect(() => {
-    // Sync articles list from articleService on mount
-    const loadArticles = async () => {
-      const articles = await articleService.listPublishedArticles();
-      if (articles && articles.length > 0) {
-        setArticlesList(articles.map(a => ({
+  const loadArticles = async () => {
+    setIsLoadingCmsArticles(true);
+    setCmsArticlesError(null);
+    try {
+      const result = await articleService.listAllArticlesForCms();
+      if (result.error) {
+        setCmsArticlesError(result.error);
+        setArticlesList([]);
+      } else {
+        setArticlesList((result.data || []).map(a => ({
           id: a.id,
           title: a.title,
           author: a.author.name,
           category: a.category,
-          status: 'Published',
+          status: a.dbStatus === 'published' ? 'Published' :
+                  a.dbStatus === 'submitted' ? 'Submitted' :
+                  a.dbStatus === 'approved' ? 'Approved' :
+                  a.dbStatus === 'archived' ? 'Archived' : 'Draft',
+          dbStatus: a.dbStatus,
           priority: a.isBreaking ? 'Breaking News' : a.isFeatured ? 'High Priority' : 'Normal',
-          date: a.publishedAt,
-          reads: `${(a.viewCount / 1000).toFixed(1)}k`,
-          wordCount: a.content.split(' ').length || 450
+          date: a.publishedAt || 'Draft',
+          reads: `${a.viewCount}`,
+          wordCount: a.content ? a.content.split(' ').length : 0
         })));
       }
-    };
+    } catch (err: any) {
+      setCmsArticlesError(err?.message || 'Failed to load CMS articles.');
+    } finally {
+      setIsLoadingCmsArticles(false);
+    }
+  };
+
+  useEffect(() => {
     loadArticles();
   }, []);
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
-    const result = await uploadMediaToSupabase(file, 'media');
+    const result = await uploadMediaToSupabase(file, 'article-media');
     if (result.url) {
       setNewDraft(prev => ({
         ...prev,
@@ -634,41 +518,30 @@ export const AdminCmsPortal: React.FC = () => {
     e.preventDefault();
     if (!newDraft.title.trim()) return;
 
+    setIsSubmittingDraft(true);
+    setDraftError(null);
+
     const authorName = currentUser?.name || newDraft.author || 'Kelly Muthomi Kinoti';
     const catSlug = newDraft.category.toLowerCase().replace(/[^a-z0-9]/g, '');
 
     const createResult = await articleService.createArticle({
       title: newDraft.title,
       summary: newDraft.content.substring(0, 180) + '...',
-      content: newDraft.content,
-      category: (catSlug || 'politics') as any,
+      body: newDraft.content,
+      category: catSlug || 'politics',
       county: 'Nairobi',
       imageUrl: newDraft.imagePreview || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
       isBreaking: newDraft.priority === 'Breaking News',
-      isFeatured: true,
-      author: {
-        name: authorName,
-        role: currentUser?.role || 'Staff Journalist',
-        avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-      },
-      status: 'published'
+      isFeatured: newDraft.priority === 'High Priority',
+      authorId: currentUser?.id,
+      status: (newDraft.targetStatus || 'published') as any
     });
 
-    if (createResult.article) {
-      setArticlesList([
-        {
-          id: createResult.article.id,
-          title: createResult.article.title,
-          author: createResult.article.author.name,
-          category: createResult.article.category,
-          status: 'Published',
-          priority: newDraft.priority,
-          date: 'Just now',
-          reads: '1.2k',
-          wordCount: newDraft.content.split(' ').length || 350
-        },
-        ...articlesList,
-      ]);
+    setIsSubmittingDraft(false);
+
+    if (!createResult.success) {
+      setDraftError(createResult.error || 'Failed to save article in Supabase.');
+      return;
     }
 
     setShowDraftModal(false);
@@ -679,23 +552,30 @@ export const AdminCmsPortal: React.FC = () => {
       content: '',
       priority: 'Normal',
       imagePreview: '',
-      fileName: ''
+      fileName: '',
+      targetStatus: 'published'
     });
 
+    await loadArticles();
     window.dispatchEvent(new Event('knews254_articles_updated'));
   };
 
   const handleUpdateArticleStatus = async (id: string, newStatus: string) => {
-    setArticlesList(articlesList.map(a => a.id === id ? { ...a, status: newStatus } : a));
-    
-    if (newStatus.toLowerCase().includes('publish') || newStatus === 'Approved') {
+    if (newStatus.toLowerCase() === 'published') {
       await articleService.publishArticle(id);
-    } else if (newStatus.toLowerCase().includes('delete') || newStatus === 'Archived') {
+    } else if (newStatus.toLowerCase() === 'draft') {
+      await articleService.unpublishArticle(id);
+    } else if (newStatus.toLowerCase() === 'approved') {
+      await articleService.approveArticle(id);
+    } else if (newStatus.toLowerCase() === 'submitted') {
+      await articleService.submitArticle(id);
+    } else if (newStatus.toLowerCase() === 'archived') {
+      await articleService.archiveArticle(id);
+    } else if (newStatus.toLowerCase() === 'deleted') {
       await articleService.softDeleteArticle(id);
-    } else {
-      await articleService.updateArticle(id, { status: newStatus.toLowerCase() as any });
     }
     
+    await loadArticles();
     window.dispatchEvent(new Event('knews254_articles_updated'));
   };
 
@@ -789,9 +669,18 @@ export const AdminCmsPortal: React.FC = () => {
         <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-emerald-900/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="w-full max-w-lg space-y-6 text-center relative z-10">
-          {/* Official KMK Executive Monogram Logo */}
+          {/* Official KNews 254 Favicon Logo Emblem */}
           <div className="flex justify-center">
-            <KmkLogo variant="card" showName={true} className="w-full shadow-2xl border border-slate-800/90" />
+            <svg viewBox="0 0 100 100" className="w-14 h-14 shadow-2xl rounded-2xl border border-slate-700/80">
+              <rect width="100" height="100" rx="24" fill="#0f172a" />
+              <text x="50" y="64" fontFamily="serif, system-ui, sans-serif" fontWeight="900" fontSize="56" fill="white" textAnchor="middle">K</text>
+              <g transform="translate(0, 82)">
+                <rect x="0" y="0" width="33.3" height="18" fill="#020617" />
+                <rect x="33.3" y="0" width="33.4" height="18" fill="#dc2626" />
+                <rect x="66.7" y="0" width="33.3" height="18" fill="#059669" />
+              </g>
+              <rect width="100" height="100" rx="24" fill="none" stroke="#475569" strokeWidth="6" />
+            </svg>
           </div>
 
           <div>
@@ -914,7 +803,7 @@ export const AdminCmsPortal: React.FC = () => {
               <span>Administrative Credential Security Policy</span>
             </div>
             <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-              All staff members log in using their registered staff email address and security password <code className="bg-slate-950 text-amber-400 px-1.5 py-0.5 rounded font-mono border border-slate-700 font-bold">67086708Km.</code> (including the trailing period). Password records and command access levels are managed under the authority of Chief Administrator <strong className="text-slate-200">Kelly Muthomi Kinoti</strong>.
+              All staff members log in using their registered staff email address and secure password managed through Supabase Authentication. Accounts and roles are linked to verified profiles in the Supabase database.
             </p>
           </div>
 
@@ -1135,7 +1024,7 @@ export const AdminCmsPortal: React.FC = () => {
               </p>
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-[11px] font-mono text-slate-400">
                 <span>Email: <strong className="text-slate-200">{currentUser?.email}</strong></span>
-                <span>Security Code: <strong className="text-emerald-400">{currentUser?.securityCode}</strong></span>
+                <span>Auth: <strong className="text-emerald-400">Supabase Auth</strong></span>
                 <span>Location: <strong className="text-slate-200">Nairobi HQ</strong></span>
               </div>
             </div>
@@ -1167,7 +1056,6 @@ export const AdminCmsPortal: React.FC = () => {
         {[
           { id: 'overview', label: 'Pulse Overview', icon: BarChart3 },
           { id: 'profile', label: 'My Profile & Supabase Storage', icon: UserCheck },
-          { id: 'vault', label: `Admin Password Vault (${staffList.length})`, icon: Key },
           { id: 'editorial', label: `Editorial Pipeline (${articlesList.length})`, icon: FileText },
           { id: 'factcheck', label: `Fact Check (${factClaims.length})`, icon: Shield },
           { id: 'hr', label: `HR Applicants (${candidates.length})`, icon: Briefcase },
@@ -1196,141 +1084,6 @@ export const AdminCmsPortal: React.FC = () => {
           );
         })}
       </div>
-
-      {/* TAB: ADMIN PASSWORD VAULT & CREDENTIAL GOVERNANCE */}
-      {activeTab === 'vault' && (
-        <div className="space-y-6">
-          <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-              <div>
-                <div className="inline-flex items-center gap-1.5 bg-red-950 text-red-400 border border-red-800/80 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-2">
-                  <Lock className="w-3.5 h-3.5 text-red-500" />
-                  CONFIDENTIAL CREDENTIAL SYSTEM
-                </div>
-                <h2 className="text-xl sm:text-2xl font-black text-white font-serif">
-                  Administrator Password Vault & Security Credential Governance
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">
-                  Master password store and security token management. Accessible under the exclusive supervision of Chief Administrator <strong className="text-slate-200">Kelly Muthomi Kinoti</strong>.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center gap-3">
-                <Key className="w-6 h-6 text-emerald-400 shrink-0" />
-                <div className="text-left text-xs font-mono">
-                  <span className="block text-[10px] text-slate-400 uppercase">Vault Hash Algorithm</span>
-                  <span className="font-bold text-white">AES-256-GCM + Salted Argon2id</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Governance Security Statement */}
-            <div className="bg-slate-900/90 border-2 border-emerald-500/40 p-5 rounded-2xl space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-emerald-400 font-mono font-bold uppercase">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Coded Password Security Directive</span>
-              </div>
-              <p className="text-slate-300 leading-relaxed">
-                All assigned secondary administrators, department leads, and support staff (including Customer Support Officer <strong className="text-white">Doreen Ngugi Nkonge</strong>) set or receive their individual encrypted access credentials. Passwords are coded and encrypted—never exposed in plain text. Password records and security vaults are managed exclusively under the authority of Chief Administrator <strong className="text-white font-mono">Kelly Muthomi Kinoti</strong>.
-              </p>
-            </div>
-
-            {!currentUser?.isChiefAdmin && (
-              <div className="bg-red-950/80 border border-red-800 p-4 rounded-2xl text-red-300 text-xs flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
-                <span>
-                  <strong>Restricted View Mode:</strong> You are logged in as <strong>{currentUser?.name}</strong> ({currentUser?.role}). Vault editing actions are strictly restricted to Chief Administrator Kelly Muthomi Kinoti.
-                </span>
-              </div>
-            )}
-
-            {/* Staff Accounts Table */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 font-mono text-[10px] uppercase border-b border-slate-800">
-                  <tr>
-                    <th className="p-4">Administrator / Staff Member</th>
-                    <th className="p-4">Email Address</th>
-                    <th className="p-4">Role & Department</th>
-                    <th className="p-4">Clearance Level</th>
-                    <th className="p-4">Security Code</th>
-                    <th className="p-4">Password Hash Status</th>
-                    <th className="p-4 text-right">Vault Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/80 text-slate-200 font-sans">
-                  {staffList.map((staff) => (
-                    <tr key={staff.id} className="hover:bg-slate-800/50 transition">
-                      <td className="p-4 flex items-center gap-3">
-                        {staff.isChiefAdmin ? (
-                          <div className="w-9 h-9 rounded-xl bg-slate-950 p-1 border border-emerald-500/50 shrink-0 flex items-center justify-center">
-                            <KmkLogo variant="avatar" showName={false} className="w-full h-full" />
-                          </div>
-                        ) : staff.isCustomPhoto ? (
-                          <DoreenPhoto variant="avatar" className="w-9 h-9 shrink-0" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center font-mono font-bold text-slate-300 shrink-0">
-                            {staff.name.charAt(0)}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-bold text-white text-sm flex items-center gap-1.5">
-                            {staff.name}
-                            {staff.isChiefAdmin && (
-                              <span className="bg-amber-950 text-amber-400 border border-amber-800 text-[9px] font-mono px-1.5 py-0.2 rounded uppercase">
-                                CHIEF ADMIN
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-mono">ID: {staff.id} • Last active: {staff.lastLogin}</p>
-                        </div>
-                      </td>
-                      <td className="p-4 font-mono text-slate-300 text-[11px]">
-                        {staff.email}
-                      </td>
-                      <td className="p-4">
-                        <p className="font-semibold text-slate-200">{staff.role}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">{staff.department}</p>
-                      </td>
-                      <td className="p-4 font-mono text-[11px]">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                          staff.isChiefAdmin
-                            ? 'bg-red-950 text-red-400 border-red-800'
-                            : staff.role.includes('Support')
-                            ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
-                            : 'bg-blue-950 text-blue-400 border-blue-800'
-                        }`}>
-                          {staff.clearanceLevel}
-                        </span>
-                      </td>
-                      <td className="p-4 font-mono text-emerald-400 font-bold text-[11px]">
-                        {staff.securityCode}
-                      </td>
-                      <td className="p-4 font-mono text-[11px]">
-                        <span className="bg-slate-950 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg">
-                          {staff.passwordHash}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        {currentUser?.isChiefAdmin ? (
-                          <button
-                            onClick={() => alert(`Password reset token issued for ${staff.name} (${staff.email}). Security code: ${staff.securityCode}`)}
-                            className="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 text-[11px] font-mono font-bold px-3 py-1.5 rounded-xl transition shadow cursor-pointer"
-                          >
-                            Reset Password Token
-                          </button>
-                        ) : (
-                          <span className="text-[10px] font-mono text-slate-500 italic">Protected</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* TAB: MY STAFF PROFILE & SUPABASE STORAGE */}
       {activeTab === 'profile' && (
@@ -1439,53 +1192,27 @@ export const AdminCmsPortal: React.FC = () => {
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2 font-serif">
-                      <Database className="w-4 h-4 text-emerald-400" /> Supabase Storage Keys
+                      <Database className="w-4 h-4 text-emerald-400" /> Supabase Storage Engine
                     </h3>
                     <span className="text-[10px] font-mono bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800 font-bold">
-                      LIVE ENGINE
+                      ACTIVE CLOUD
                     </span>
                   </div>
 
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Configure your Supabase Cloud credentials below to upload profile pictures, media attachments, and documents directly to your Supabase bucket.
+                    Connected to Supabase Cloud Media Storage Bucket (<code className="text-emerald-400">article-media</code>). All uploaded photos, attachments, and documents are securely processed server-side.
                   </p>
 
-                  <form onSubmit={handleSaveSupabaseConfig} className="space-y-3 text-xs">
-                    <div>
-                      <label className="block text-[11px] font-mono text-slate-300 mb-1">VITE_SUPABASE_URL</label>
-                      <input
-                        type="text"
-                        value={supabaseUrlInput}
-                        onChange={(e) => setSupabaseUrlInput(e.target.value)}
-                        placeholder="https://xyzproject.supabase.co"
-                        className="w-full bg-slate-950 border border-slate-800 text-xs text-emerald-400 font-mono p-2.5 rounded-xl"
-                      />
+                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-slate-300 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Status:</span>
+                      <span className="text-emerald-400 font-bold">✓ Connected</span>
                     </div>
-
-                    <div>
-                      <label className="block text-[11px] font-mono text-slate-300 mb-1">VITE_SUPABASE_ANON_KEY</label>
-                      <input
-                        type="password"
-                        value={supabaseKeyInput}
-                        onChange={(e) => setSupabaseKeyInput(e.target.value)}
-                        placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
-                        className="w-full bg-slate-950 border border-slate-800 text-xs text-emerald-400 font-mono p-2.5 rounded-xl"
-                      />
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Bucket:</span>
+                      <span className="text-slate-200">article-media</span>
                     </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition shadow flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Database className="w-3.5 h-3.5" /> Save Supabase Keys to Local Environment
-                    </button>
-
-                    {supabaseSavedSuccess && (
-                      <p className="text-[10px] text-emerald-400 font-mono text-center font-bold">
-                        ✓ Supabase Credentials Saved! Storage upload engine updated.
-                      </p>
-                    )}
-                  </form>
+                  </div>
                 </div>
               </div>
 

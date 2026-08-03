@@ -1,6 +1,5 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, linkMediaToArticle } from '../lib/supabase';
 import { Article, NewsCategory } from '../types';
-import { FEATURED_ARTICLES } from '../data/newsData';
 
 export type ArticleStatus = 
   | 'draft'
@@ -44,470 +43,636 @@ export interface DbArticleRecord {
   updated_at?: string;
   deleted_at?: string | null;
   // Dynamic relation fields
-  author_name?: string;
-  author_role?: string;
-  author_avatar?: string;
-  category_slug?: string;
-  tags?: string[];
+  primary_category?: { id: string; name: string; slug: string };
+  author?: { id: string; name: string; role?: string; profile_image?: string };
 }
-
-const LOCAL_ARTICLES_STORAGE_KEY = 'knews254_cms_articles_v2';
 
 /**
- * Local cache/store for CMS & fallback articles
+ * Category Slug <-> ID cache
  */
-function getStoredLocalArticles(): Article[] {
-  if (typeof window === 'undefined') return FEATURED_ARTICLES;
-  try {
-    const raw = localStorage.getItem(LOCAL_ARTICLES_STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(LOCAL_ARTICLES_STORAGE_KEY, JSON.stringify(FEATURED_ARTICLES));
-      return FEATURED_ARTICLES;
-    }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : FEATURED_ARTICLES;
-  } catch {
-    return FEATURED_ARTICLES;
-  }
-}
+let categorySlugMap: Record<string, string> = {};
 
-function saveStoredLocalArticles(articles: Article[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(LOCAL_ARTICLES_STORAGE_KEY, JSON.stringify(articles));
-    window.dispatchEvent(new Event('knews254_articles_updated'));
-  } catch (e) {
-    console.error('Error saving local articles:', e);
+async function resolveCategoryId(slug: string): Promise<string | null> {
+  if (!isSupabaseConfigured() || !supabase) return null;
+  const normalizedSlug = slug.toLowerCase().trim();
+  if (categorySlugMap[normalizedSlug]) {
+    return categorySlugMap[normalizedSlug];
   }
+  try {
+    const { data } = await supabase
+      .from('categories')
+      .select('id, slug')
+      .ilike('slug', normalizedSlug)
+      .maybeSingle();
+
+    if (data?.id) {
+      categorySlugMap[normalizedSlug] = data.id;
+      return data.id;
+    }
+    // Fallback: pick any category or 'home'
+    const fallback = await supabase.from('categories').select('id, slug').limit(1).maybeSingle();
+    if (fallback.data?.id) {
+      categorySlugMap[fallback.data.slug] = fallback.data.id;
+      return fallback.data.id;
+    }
+  } catch (e) {
+    console.warn('Category resolution error:', e);
+  }
+  return null;
 }
 
 /**
  * Helper to convert Supabase DbArticleRecord to UI Article interface
  */
 export function mapDbRecordToArticle(record: any): Article {
-  const publishedAtStr = record.published_at || record.created_at || new Date().toISOString();
+  const publishedAtStr = record.published_at 
+    ? new Date(record.published_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' EAT'
+    : record.created_at 
+    ? new Date(record.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })
+    : 'Recently';
+
+  const catSlug = record.primary_category?.slug || record.category_slug || 'politics';
   
+  const authorName = record.author?.name || record.author_name || 'Kelly Muthomi Kinoti';
+  const authorRole = record.author?.role || record.author_role || 'Executive Editor';
+  const authorAvatar = record.author?.profile_image || record.author_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+
   return {
     id: record.id,
-    title: record.title,
+    title: record.title || 'Untitled Article',
     slug: record.slug || record.id,
     summary: record.summary || '',
     content: record.body || record.summary || '',
-    category: (record.category_slug || record.category || 'home') as NewsCategory,
+    category: catSlug as NewsCategory,
     author: {
       id: record.author_id,
-      name: record.author_name || record.author?.name || 'Kelly Muthomi Kinoti',
-      role: record.author_role || record.author?.role || 'Executive Editor',
-      avatar: record.author_avatar || record.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      name: authorName,
+      role: authorRole,
+      avatar: authorAvatar,
     },
     publishedAt: publishedAtStr,
     readTime: `${Math.max(2, Math.ceil((record.body?.length || 500) / 800))} min read`,
-    imageUrl: record.featured_image_url || record.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
-    imageCaption: record.image_caption,
+    imageUrl: record.featured_image_url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
+    imageCaption: record.image_caption || '',
     county: record.county || 'Nairobi',
-    isBreaking: Boolean(record.is_breaking || record.isBreaking),
-    isFeatured: Boolean(record.is_featured || record.isFeatured),
-    isEditorPick: Boolean(record.is_editor_choice || record.isEditorPick),
-    viewCount: record.view_count || record.viewCount || 1250,
-    tags: Array.isArray(record.tags) ? record.tags : ['Kenya', 'Knews254', record.county || 'Devolution']
+    isBreaking: Boolean(record.is_breaking),
+    isFeatured: Boolean(record.is_featured),
+    isEditorPick: Boolean(record.is_editor_choice),
+    viewCount: record.view_count || 150,
+    tags: record.county ? ['Kenya', 'Knews254', record.county] : ['Kenya', 'Knews254']
   };
 }
 
+const SELECT_QUERY = '*, primary_category:categories!articles_primary_category_id_fkey(id, name, slug), author:profiles!articles_author_id_fkey(id, name, role, profile_image)';
+
 /**
- * ARTICLE REPOSITORY & SERVICE API
+ * ARTICLE SERVICE API (SUPABASE EXCLUSIVE)
  */
 export const articleService = {
   /**
-   * List all published articles
+   * List all public published articles (status = 'published', deleted_at IS NULL, published_at <= NOW())
    */
-  async listPublishedArticles(): Promise<Article[]> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('articles')
-          .select('*')
-          .eq('status', 'published')
-          .is('deleted_at', null)
-          .order('published_at', { ascending: false });
-
-        if (!error && data && data.length > 0) {
-          return data.map(mapDbRecordToArticle);
-        }
-      } catch (err) {
-        console.warn('Supabase fetch failed, falling back to local/cached data:', err);
-      }
+  async listPublishedArticles(): Promise<{ data: Article[]; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase database is not configured.' };
     }
-    
-    // Fallback or offline store
-    const local = getStoredLocalArticles();
-    return local;
+
+    try {
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('status', 'published')
+        .is('deleted_at', null)
+        .lte('published_at', nowIso)
+        .order('published_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase fetch published articles error:', error);
+        return { data: [], error: error.message };
+      }
+
+      return { data: (data || []).map(mapDbRecordToArticle) };
+    } catch (err: any) {
+      console.error('Supabase fetch exception:', err);
+      return { data: [], error: err?.message || 'Failed to load articles from Supabase.' };
+    }
+  },
+
+  /**
+   * List ALL articles for CMS Editorial Management (drafts, submitted, approved, published, archived)
+   */
+  async listAllArticlesForCms(): Promise<{ data: (Article & { dbStatus: ArticleStatus; rawRecord: any })[]; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase database is not configured.' };
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        return { data: [], error: error.message };
+      }
+
+      const mapped = (data || []).map(record => ({
+        ...mapDbRecordToArticle(record),
+        dbStatus: record.status as ArticleStatus,
+        rawRecord: record
+      }));
+
+      return { data: mapped };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Failed to load CMS articles.' };
+    }
   },
 
   /**
    * Get single article by ID
    */
   async getArticleById(id: string): Promise<Article | null> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('articles')
-          .select('*')
-          .eq('id', id)
-          .single();
+    if (!isSupabaseConfigured() || !supabase) return null;
 
-        if (!error && data) {
-          return mapDbRecordToArticle(data);
-        }
-      } catch (err) {
-        console.warn('Error fetching article by id:', err);
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!error && data) {
+        return mapDbRecordToArticle(data);
       }
+    } catch (err) {
+      console.error('Error fetching article by id:', err);
     }
-
-    const local = getStoredLocalArticles();
-    return local.find(a => a.id === id || a.slug === id) || null;
+    return null;
   },
 
   /**
-   * Get single article by Slug
+   * Get single article by Slug or ID
    */
   async getArticleBySlug(slug: string): Promise<Article | null> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data, error } = await supabase
+    if (!isSupabaseConfigured() || !supabase) return null;
+
+    try {
+      let { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (!data) {
+        const { data: idData } = await supabase
           .from('articles')
-          .select('*')
-          .eq('slug', slug)
-          .single();
-
-        if (!error && data) {
-          return mapDbRecordToArticle(data);
-        }
-      } catch (err) {
-        console.warn('Error fetching article by slug:', err);
+          .select(SELECT_QUERY)
+          .eq('id', slug)
+          .maybeSingle();
+        data = idData;
       }
-    }
 
-    const local = getStoredLocalArticles();
-    return local.find(a => a.slug === slug || a.id === slug) || null;
+      if (data) {
+        return mapDbRecordToArticle(data);
+      }
+    } catch (err) {
+      console.error('Error fetching article by slug:', err);
+    }
+    return null;
   },
 
   /**
    * List articles by Category
    */
-  async listArticlesByCategory(category: NewsCategory | string): Promise<Article[]> {
-    const all = await this.listPublishedArticles();
-    if (!category || category === 'home' || category === 'latest') return all;
-    return all.filter(a => a.category === category || a.tags.includes(String(category)));
+  async listArticlesByCategory(category: NewsCategory | string): Promise<{ data: Article[]; error?: string }> {
+    if (!category || category === 'home' || category === 'latest') {
+      return this.listPublishedArticles();
+    }
+
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase database is not configured.' };
+    }
+
+    try {
+      const categoryId = await resolveCategoryId(category);
+      const nowIso = new Date().toISOString();
+
+      let query = supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('status', 'published')
+        .is('deleted_at', null)
+        .lte('published_at', nowIso)
+        .order('published_at', { ascending: false });
+
+      if (categoryId) {
+        query = query.eq('primary_category_id', categoryId);
+      }
+
+      const { data, error } = await query;
+      if (error) return { data: [], error: error.message };
+
+      return { data: (data || []).map(mapDbRecordToArticle) };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Failed to fetch articles by category.' };
+    }
   },
 
   /**
    * List articles by Author
    */
-  async listArticlesByAuthor(authorNameOrId: string): Promise<Article[]> {
-    const all = await this.listPublishedArticles();
-    const query = authorNameOrId.toLowerCase();
-    return all.filter(a => 
-      a.author.name.toLowerCase().includes(query) || 
-      (a.author.id && a.author.id === authorNameOrId)
+  async listArticlesByAuthor(authorIdOrName: string): Promise<{ data: Article[]; error?: string }> {
+    const res = await this.listPublishedArticles();
+    if (res.error) return res;
+    const q = authorIdOrName.toLowerCase();
+    const filtered = res.data.filter(a => 
+      a.author.name.toLowerCase().includes(q) || 
+      (a.author.id && a.author.id === authorIdOrName)
     );
+    return { data: filtered };
   },
 
   /**
    * List articles by County
    */
-  async listArticlesByCounty(countyName: string): Promise<Article[]> {
-    const all = await this.listPublishedArticles();
-    const q = countyName.toLowerCase();
-    return all.filter(a => (a.county && a.county.toLowerCase() === q) || a.tags.some(t => t.toLowerCase() === q));
+  async listArticlesByCounty(countyName: string): Promise<{ data: Article[]; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase database is not configured.' };
+    }
+
+    try {
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('status', 'published')
+        .is('deleted_at', null)
+        .lte('published_at', nowIso)
+        .ilike('county', `%${countyName}%`)
+        .order('published_at', { ascending: false });
+
+      if (error) return { data: [], error: error.message };
+      return { data: (data || []).map(mapDbRecordToArticle) };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Failed to fetch county articles.' };
+    }
   },
 
   /**
    * List Breaking News articles
    */
-  async listBreakingNews(): Promise<Article[]> {
-    const all = await this.listPublishedArticles();
-    return all.filter(a => a.isBreaking);
+  async listBreakingNews(): Promise<{ data: Article[]; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase database is not configured.' };
+    }
+
+    try {
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('status', 'published')
+        .eq('is_breaking', true)
+        .is('deleted_at', null)
+        .lte('published_at', nowIso)
+        .order('published_at', { ascending: false });
+
+      if (error) return { data: [], error: error.message };
+      return { data: (data || []).map(mapDbRecordToArticle) };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Failed to fetch breaking news.' };
+    }
   },
 
   /**
    * List Featured Articles
    */
-  async listFeaturedArticles(): Promise<Article[]> {
-    const all = await this.listPublishedArticles();
-    return all.filter(a => a.isFeatured);
+  async listFeaturedArticles(): Promise<{ data: Article[]; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase database is not configured.' };
+    }
+
+    try {
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('status', 'published')
+        .eq('is_featured', true)
+        .is('deleted_at', null)
+        .lte('published_at', nowIso)
+        .order('published_at', { ascending: false });
+
+      if (error) return { data: [], error: error.message };
+      return { data: (data || []).map(mapDbRecordToArticle) };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Failed to fetch featured stories.' };
+    }
   },
 
   /**
-   * List Editor Choices
+   * Search Articles in title, summary, body, county
    */
-  async listEditorChoices(): Promise<Article[]> {
-    const all = await this.listPublishedArticles();
-    return all.filter(a => a.isEditorPick);
-  },
-
-  /**
-   * Search Articles in title, summary, body, tags, county
-   */
-  async searchArticles(term: string): Promise<Article[]> {
+  async searchArticles(term: string): Promise<{ data: Article[]; error?: string }> {
     if (!term || !term.trim()) return this.listPublishedArticles();
-    const q = term.toLowerCase().trim();
-    const all = await this.listPublishedArticles();
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase database is not configured.' };
+    }
 
-    return all.filter(a => 
-      a.title.toLowerCase().includes(q) ||
-      a.summary.toLowerCase().includes(q) ||
-      a.content.toLowerCase().includes(q) ||
-      (a.county && a.county.toLowerCase().includes(q)) ||
-      a.tags.some(t => t.toLowerCase().includes(q))
-    );
+    try {
+      const q = term.trim();
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('status', 'published')
+        .is('deleted_at', null)
+        .lte('published_at', nowIso)
+        .or(`title.ilike.%${q}%,summary.ilike.%${q}%,body.ilike.%${q}%,county.ilike.%${q}%`)
+        .order('published_at', { ascending: false });
+
+      if (error) return { data: [], error: error.message };
+      return { data: (data || []).map(mapDbRecordToArticle) };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Search query failed.' };
+    }
   },
 
   /**
-   * Create new article
+   * Create new article draft or publication in Supabase
    */
-  async createArticle(payload: Partial<Article> & { status?: ArticleStatus }): Promise<{ success: boolean; article: Article; error?: string }> {
-    const id = payload.id || `art-${Date.now()}`;
-    const slug = payload.slug || payload.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || id;
-    
-    const newArticle: Article = {
-      id,
-      title: payload.title || 'Untitled Article',
-      slug,
-      summary: payload.summary || '',
-      content: payload.content || '',
-      category: (payload.category || 'home') as NewsCategory,
-      author: payload.author || {
-        name: 'Kelly Muthomi Kinoti',
-        role: 'Chief Editor',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-      },
-      publishedAt: payload.publishedAt || new Date().toISOString().replace('T', ' ').substring(0, 16) + ' EAT',
-      readTime: payload.readTime || '3 min read',
-      imageUrl: payload.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
-      imageCaption: payload.imageCaption,
-      county: payload.county || 'Nairobi',
-      isBreaking: payload.isBreaking ?? false,
-      isFeatured: payload.isFeatured ?? true,
-      isEditorPick: payload.isEditorPick ?? false,
-      viewCount: payload.viewCount || 1,
-      tags: payload.tags || ['Kenya', 'Knews254']
-    };
+  async createArticle(payload: {
+    title: string;
+    summary?: string;
+    body: string;
+    category?: string;
+    county?: string;
+    imageUrl?: string;
+    imagePath?: string;
+    imageCaption?: string;
+    imageCredit?: string;
+    mediaId?: string;
+    isBreaking?: boolean;
+    isFeatured?: boolean;
+    isEditorPick?: boolean;
+    status?: ArticleStatus;
+    authorId?: string;
+    scheduledAt?: string;
+  }): Promise<{ success: boolean; article?: Article; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase is not configured. Cannot create article.' };
+    }
 
-    // 1. Always update local store for instant UI response & offline capability
-    const local = getStoredLocalArticles();
-    const updatedLocal = [newArticle, ...local.filter(a => a.id !== newArticle.id)];
-    saveStoredLocalArticles(updatedLocal);
+    try {
+      const slug = payload.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
 
-    // 2. Persist to Supabase if connected
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const dbPayload = {
-          id: newArticle.id.includes('-') && newArticle.id.length > 20 ? newArticle.id : undefined,
-          title: newArticle.title,
-          slug: newArticle.slug,
-          summary: newArticle.summary,
-          body: newArticle.content,
-          status: payload.status || 'published',
-          county: newArticle.county,
-          featured_image_url: newArticle.imageUrl,
-          image_caption: newArticle.imageCaption,
-          is_featured: newArticle.isFeatured,
-          is_breaking: newArticle.isBreaking,
-          is_editor_choice: newArticle.isEditorPick,
-          published_at: new Date().toISOString()
-        };
+      const categoryId = await resolveCategoryId(payload.category || 'politics');
+      const targetStatus = payload.status || 'draft';
+      const isPublished = targetStatus === 'published';
 
-        const { data, error } = await supabase
-          .from('articles')
-          .insert([dbPayload])
-          .select()
-          .single();
+      const dbPayload: any = {
+        title: payload.title.trim(),
+        slug,
+        summary: payload.summary || payload.body.substring(0, 200) + '...',
+        body: payload.body,
+        status: targetStatus,
+        county: payload.county || 'Nairobi',
+        featured_image_url: payload.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
+        featured_image_path: payload.imagePath || null,
+        image_caption: payload.imageCaption || '',
+        image_credit: payload.imageCredit || '',
+        is_featured: payload.isFeatured ?? true,
+        is_breaking: payload.isBreaking ?? false,
+        is_editor_choice: payload.isEditorPick ?? false,
+        primary_category_id: categoryId || undefined,
+        published_at: isPublished ? new Date().toISOString() : null,
+        scheduled_at: payload.scheduledAt || null,
+        author_id: payload.authorId || undefined
+      };
 
-        if (error) {
-          console.warn('Supabase insert warning:', error.message);
-        } else if (data) {
-          return { success: true, article: mapDbRecordToArticle(data) };
+      const { data, error } = await supabase
+        .from('articles')
+        .insert([dbPayload])
+        .select(SELECT_QUERY)
+        .single();
+
+      if (error) {
+        console.error('Supabase article insert error:', error);
+        return { success: false, error: error.message };
+      }
+
+      if (data?.id && payload.mediaId) {
+        await linkMediaToArticle(data.id, payload.mediaId, true, 0);
+      }
+
+      const createdArticle = mapDbRecordToArticle(data);
+      window.dispatchEvent(new Event('knews254_articles_updated'));
+      return { success: true, article: createdArticle };
+    } catch (err: any) {
+      console.error('Create article exception:', err);
+      return { success: false, error: err?.message || 'Failed to insert article into Supabase.' };
+    }
+  },
+
+  /**
+   * Update existing article in Supabase
+   */
+  async updateArticle(
+    id: string,
+    updates: {
+      title?: string;
+      summary?: string;
+      body?: string;
+      category?: string;
+      county?: string;
+      imageUrl?: string;
+      imagePath?: string;
+      imageCaption?: string;
+      imageCredit?: string;
+      mediaId?: string;
+      isBreaking?: boolean;
+      isFeatured?: boolean;
+      isEditorPick?: boolean;
+      status?: ArticleStatus;
+      scheduledAt?: string;
+    }
+  ): Promise<{ success: boolean; article?: Article; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase is not configured.' };
+    }
+
+    try {
+      const patch: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (updates.title) patch.title = updates.title.trim();
+      if (updates.summary) patch.summary = updates.summary;
+      if (updates.body) patch.body = updates.body;
+      if (updates.county) patch.county = updates.county;
+      if (updates.imageUrl) patch.featured_image_url = updates.imageUrl;
+      if (updates.imagePath !== undefined) patch.featured_image_path = updates.imagePath;
+      if (updates.imageCaption !== undefined) patch.image_caption = updates.imageCaption;
+      if (updates.imageCredit !== undefined) patch.image_credit = updates.imageCredit;
+      if (updates.isBreaking !== undefined) patch.is_breaking = updates.isBreaking;
+      if (updates.isFeatured !== undefined) patch.is_featured = updates.isFeatured;
+      if (updates.isEditorPick !== undefined) patch.is_editor_choice = updates.isEditorPick;
+
+      if (updates.category) {
+        const catId = await resolveCategoryId(updates.category);
+        if (catId) patch.primary_category_id = catId;
+      }
+
+      if (updates.status) {
+        patch.status = updates.status;
+        if (updates.status === 'published') {
+          patch.published_at = new Date().toISOString();
         }
-      } catch (err: any) {
-        console.warn('Supabase insert exception:', err);
       }
-    }
 
-    return { success: true, article: newArticle };
-  },
-
-  /**
-   * Update existing article
-   */
-  async updateArticle(id: string, updates: Partial<Article> & { status?: ArticleStatus }): Promise<{ success: boolean; article: Article; error?: string }> {
-    const local = getStoredLocalArticles();
-    const existing = local.find(a => a.id === id || a.slug === id);
-    if (!existing) {
-      return { success: false, article: null as any, error: 'Article not found' };
-    }
-
-    const updatedArticle: Article = {
-      ...existing,
-      ...updates,
-      author: updates.author ? { ...existing.author, ...updates.author } : existing.author,
-    };
-
-    const updatedList = local.map(a => (a.id === existing.id ? updatedArticle : a));
-    saveStoredLocalArticles(updatedList);
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase
-          .from('articles')
-          .update({
-            title: updatedArticle.title,
-            summary: updatedArticle.summary,
-            body: updatedArticle.content,
-            county: updatedArticle.county,
-            featured_image_url: updatedArticle.imageUrl,
-            is_featured: updatedArticle.isFeatured,
-            is_breaking: updatedArticle.isBreaking,
-            is_editor_choice: updatedArticle.isEditorPick,
-            status: updates.status || 'published'
-          })
-          .eq('id', id);
-      } catch (err) {
-        console.warn('Supabase update exception:', err);
+      if (updates.scheduledAt) {
+        patch.scheduled_at = updates.scheduledAt;
       }
-    }
 
-    return { success: true, article: updatedArticle };
+      const { data, error } = await supabase
+        .from('articles')
+        .update(patch)
+        .eq('id', id)
+        .select(SELECT_QUERY)
+        .maybeSingle();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (id && updates.mediaId) {
+        await linkMediaToArticle(id, updates.mediaId, true, 0);
+      }
+
+      window.dispatchEvent(new Event('knews254_articles_updated'));
+      return { success: true, article: data ? mapDbRecordToArticle(data) : undefined };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update article in Supabase.' };
+    }
   },
 
   /** Workflow status actions */
   async submitArticle(id: string) { return this.updateArticle(id, { status: 'submitted' }); },
   async approveArticle(id: string) { return this.updateArticle(id, { status: 'approved' }); },
-  async scheduleArticle(id: string, time: string) { return this.updateArticle(id, { status: 'scheduled', scheduledFor: time }); },
+  async scheduleArticle(id: string, time: string) { return this.updateArticle(id, { status: 'scheduled', scheduledAt: time }); },
   async publishArticle(id: string) { return this.updateArticle(id, { status: 'published' }); },
   async unpublishArticle(id: string) { return this.updateArticle(id, { status: 'draft' }); },
   async archiveArticle(id: string) { return this.updateArticle(id, { status: 'archived' }); },
 
   /**
-   * Soft Delete Article
+   * Soft Delete Article (set deleted_at = NOW())
    */
-  async softDeleteArticle(id: string): Promise<boolean> {
-    const local = getStoredLocalArticles();
-    const filtered = local.filter(a => a.id !== id);
-    saveStoredLocalArticles(filtered);
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase
-          .from('articles')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', id);
-      } catch (e) {
-        console.error('Soft delete error:', e);
-      }
+  async softDeleteArticle(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase is not configured.' };
     }
-    return true;
+
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) return { success: false, error: error.message };
+
+      window.dispatchEvent(new Event('knews254_articles_updated'));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to delete article.' };
+    }
   },
 
   /**
-   * Restore Article
+   * Restore Article (deleted_at = NULL, status = 'published')
    */
-  async restoreArticle(id: string): Promise<boolean> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase
-          .from('articles')
-          .update({ deleted_at: null, status: 'published' })
-          .eq('id', id);
-      } catch (e) {
-        console.error('Restore error:', e);
-      }
+  async restoreArticle(id: string): Promise<{ success: boolean; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase is not configured.' };
     }
-    return true;
+
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .update({ deleted_at: null, status: 'published', published_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) return { success: false, error: error.message };
+
+      window.dispatchEvent(new Event('knews254_articles_updated'));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to restore article.' };
+    }
   },
 
   /**
    * Record Article View in Analytics
    */
   async recordView(id: string): Promise<void> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        // Find UUID if possible
-        let uuid = id;
-        if (!id.includes('-')) {
-          const { data } = await supabase.from('articles').select('id').or(`slug.eq.${id},id.eq.${id}`).maybeSingle();
-          if (data) uuid = data.id;
-        }
-        await supabase.from('article_views').insert({
-          article_id: uuid,
-          viewed_at: new Date().toISOString()
-        });
-      } catch (e) {
-        console.warn('Record view warning:', e);
-      }
+    if (!isSupabaseConfigured() || !supabase) return;
+    try {
+      await supabase.from('article_views').insert({
+        article_id: id,
+        viewed_at: new Date().toISOString()
+      });
+    } catch (e) {
+      // Non-blocking view tracking
     }
   },
 
   /**
-   * Get Comments for an Article
+   * Get Comments for an Article from Supabase
    */
   async getComments(articleId: string): Promise<{ id: string; name: string; text: string; date: string; likes: number }[]> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        let uuid = articleId;
-        if (!articleId.includes('-')) {
-          const { data } = await supabase.from('articles').select('id').or(`slug.eq.${articleId},id.eq.${articleId}`).maybeSingle();
-          if (data) uuid = data.id;
-        }
-        const { data, error } = await supabase
-          .from('comments')
-          .select('*')
-          .eq('article_id', uuid)
-          .eq('status', 'approved')
-          .order('created_at', { ascending: false });
+    if (!isSupabaseConfigured() || !supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*')
+        .eq('article_id', articleId)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
 
-        if (!error && data && data.length > 0) {
-          return data.map(c => ({
-            id: c.id,
-            name: c.name || c.author_name || 'Anonymous Reader',
-            text: c.content,
-            date: new Date(c.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-            likes: c.likes_count || 1
-          }));
-        }
-      } catch (e) {
-        console.warn('Get comments warning:', e);
+      if (!error && data) {
+        return data.map(c => ({
+          id: c.id,
+          name: c.name || c.author_name || 'Anonymous Reader',
+          text: c.content,
+          date: new Date(c.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          likes: c.likes_count || 1
+        }));
       }
+    } catch (e) {
+      console.warn('Get comments error:', e);
     }
     return [];
   },
 
   /**
-   * Submit Comment for an Article
+   * Submit Comment for an Article in Supabase
    */
   async submitComment(articleId: string, name: string, content: string): Promise<boolean> {
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        let uuid = articleId;
-        if (!articleId.includes('-')) {
-          const { data } = await supabase.from('articles').select('id').or(`slug.eq.${articleId},id.eq.${articleId}`).maybeSingle();
-          if (data) uuid = data.id;
-        }
-        const { error } = await supabase.from('comments').insert({
-          article_id: uuid,
-          name: name.trim() || 'Anonymous Reader',
-          content: content.trim(),
-          status: 'pending'
-        });
-        if (error) {
-          console.error('Submit comment error:', error);
-          return false;
-        }
-        return true;
-      } catch (e) {
-        console.error('Submit comment error:', e);
-        return false;
-      }
+    if (!isSupabaseConfigured() || !supabase) return false;
+    try {
+      const { error } = await supabase.from('comments').insert({
+        article_id: articleId,
+        name: name.trim() || 'Anonymous Reader',
+        content: content.trim(),
+        status: 'pending'
+      });
+      return !error;
+    } catch (e) {
+      return false;
     }
-    return true;
   }
 };
