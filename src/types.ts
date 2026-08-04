@@ -224,3 +224,80 @@ export interface PRDSectionData {
   deliverables: string[];
   architectureNotes?: string;
 }
+
+export interface MediaItem {
+  id: string;
+  filename: string;
+  url: string;
+  fileType: 'image' | 'audio' | 'video' | 'document';
+  mimeType: string;
+  sizeBytes: number;
+  folder: string; // e.g. "2026/08/politics"
+  altText: string;
+  caption: string;
+  credit: string;
+  hash: string; // SHA256 / MD5 hash
+  uploadedAt: string;
+  uploadedBy: string;
+  tags: string[];
+  usedInArticles: { articleId: string; title: string }[];
+}
+
+export interface AssignmentTask {
+  id: string;
+  title: string;
+  briefDescription: string;
+  category: NewsCategory;
+  assignedToName: string;
+  assignedToEmail: string;
+  assignedByName: string;
+  county: string;
+  deadline: string;
+  priority: 'URGENT_BREAKING' | 'HIGH' | 'STANDARD' | 'BACKGROUND';
+  status: 'ASSIGNED' | 'IN_PROGRESS' | 'DRAFT_SUBMITTED' | 'PUBLISHED' | 'CANCELLED';
+  targetWordCount: number;
+  createdAt: string;
+  commentsCount: number;
+}
+
+export interface EditorialComment {
+  id: string;
+  articleId: string;
+  authorName: string;
+  authorRole: string;
+  comment: string;
+  createdAt: string;
+  type: 'general' | 'revision_request' | 'legal_flag' | 'factcheck_note';
+}
+
+export interface ArticleVersion {
+  versionId: string;
+  articleId: string;
+  title: string;
+  summary: string;
+  content: string;
+  modifiedBy: string;
+  timestamp: string;
+  changeNote: string;
+}
+
+export interface AdSlot {
+  id: string;
+  slotName: string;
+  placement: 'header_banner' | 'sidebar_rectangle' | 'in_article_native' | 'footer_leaderboard' | 'sponsored_post';
+  advertiserName: string;
+  cpmRateKes: number;
+  impressionsCount: number;
+  clicksCount: number;
+  status: 'active' | 'paused' | 'scheduled';
+  startDate: string;
+  endDate: string;
+}
+
+export interface MembershipTier {
+  id: string;
+  name: string;
+  priceKesPerMonth: number;
+  features: string[];
+  activeSubscribers: number;
+}

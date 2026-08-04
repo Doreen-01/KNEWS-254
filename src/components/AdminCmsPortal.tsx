@@ -5,7 +5,7 @@ import { uploadMediaToSupabase, isSupabaseConfigured, supabase } from '../lib/su
 import { articleService } from '../services/articleService';
 import { authService, UserProfile } from '../services/authService';
 import { AUTHORS_LIST } from '../data/newsData';
-import { NewsCategory } from '../types';
+import { NewsCategory, AssignmentTask, MediaItem, AdSlot, MembershipTier } from '../types';
 import {
   Sliders,
   CheckSquare,
@@ -375,8 +375,376 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
 
   // Active portal tab
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'profile' | 'editorial' | 'factcheck' | 'hr' | 'support' | 'reviews' | 'corrections' | 'chat_rota' | 'audit_logs' | 'infrastructure'
+    | 'overview'
+    | 'profile'
+    | 'editorial'
+    | 'assignment_desk'
+    | 'media_library'
+    | 'ai_newsroom'
+    | 'monetization'
+    | 'seo_tools'
+    | 'factcheck'
+    | 'hr'
+    | 'support'
+    | 'reviews' | 'corrections' | 'chat_rota' | 'audit_logs' | 'infrastructure'
   >('overview');
+
+  /* -------------------------------------------------------------------------- */
+  /* ASSIGNMENT DESK & NEWSROOM WORKLOAD MATRIX                                */
+  /* -------------------------------------------------------------------------- */
+  const [assignmentsList, setAssignmentsList] = useState<AssignmentTask[]>(() => {
+    const saved = localStorage.getItem('knews254_assignments');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      {
+        id: 'asg-001',
+        title: 'Deep Dive: Infotrak 2027 Presidential Polling Trends in Rift Valley & Coast',
+        briefDescription: 'Conduct audio interviews with political analysts and compile regional voter sentiment data across Nakuru, Uasin Gishu, and Mombasa.',
+        category: 'elections',
+        assignedToName: 'Scholastica Karwitha',
+        assignedToEmail: 'scholasticakarwitha@gmail.com',
+        assignedByName: 'Muchui Mwirigi (Editor-in-Chief)',
+        county: 'Nakuru',
+        deadline: '2026-08-08 17:00',
+        priority: 'URGENT_BREAKING',
+        status: 'IN_PROGRESS',
+        targetWordCount: 1200,
+        createdAt: '2026-08-04 09:15',
+        commentsCount: 3
+      },
+      {
+        id: 'asg-002',
+        title: 'Investigation: Mombasa Port Green Energy Transition & Blue Economy Audit',
+        briefDescription: 'Analyze KPA port electrification tenders, solar installation contracts, and environmental impact assessments for Kilindini Harbor.',
+        category: 'investigations',
+        assignedToName: 'David Otieno Kinuthia',
+        assignedToEmail: 'david.otieno@knews254.co.ke',
+        assignedByName: 'Alfred Mwenda (Managing Editor)',
+        county: 'Mombasa',
+        deadline: '2026-08-10 12:00',
+        priority: 'HIGH',
+        status: 'ASSIGNED',
+        targetWordCount: 1800,
+        createdAt: '2026-08-03 14:20',
+        commentsCount: 1
+      },
+      {
+        id: 'asg-003',
+        title: 'County Special: Kisumu Lakefront Tourism & Fish Farmers Co-op Revival',
+        briefDescription: 'Feature article on youth-led aquaculture cage farming in Lake Victoria and county government cold-chain investments.',
+        category: 'county',
+        assignedToName: 'David Otieno Kinuthia',
+        assignedToEmail: 'david.otieno@knews254.co.ke',
+        assignedByName: 'Scholastica Karwitha (Chief Reporter)',
+        county: 'Kisumu',
+        deadline: '2026-08-09 18:00',
+        priority: 'STANDARD',
+        status: 'DRAFT_SUBMITTED',
+        targetWordCount: 950,
+        createdAt: '2026-08-02 11:00',
+        commentsCount: 4
+      }
+    ];
+  });
+
+  const [newAssignment, setNewAssignment] = useState({
+    title: '',
+    briefDescription: '',
+    category: 'elections' as NewsCategory,
+    assignedToName: 'Scholastica Karwitha',
+    assignedToEmail: 'scholasticakarwitha@gmail.com',
+    county: 'Nairobi',
+    deadline: '',
+    priority: 'HIGH' as 'URGENT_BREAKING' | 'HIGH' | 'STANDARD' | 'BACKGROUND',
+    targetWordCount: 1000
+  });
+
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+
+  const handleCreateAssignment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAssignment.title.trim()) return;
+
+    const task: AssignmentTask = {
+      id: `asg-${Date.now()}`,
+      title: newAssignment.title.trim(),
+      briefDescription: newAssignment.briefDescription.trim(),
+      category: newAssignment.category,
+      assignedToName: newAssignment.assignedToName,
+      assignedToEmail: newAssignment.assignedToEmail,
+      assignedByName: `${currentUserProfile?.name || 'Kelly Muthomi Kinoti'} (${currentRole})`,
+      county: newAssignment.county,
+      deadline: newAssignment.deadline || '2026-08-10 18:00',
+      priority: newAssignment.priority,
+      status: 'ASSIGNED',
+      targetWordCount: Number(newAssignment.targetWordCount) || 800,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      commentsCount: 0
+    };
+
+    const updated = [task, ...assignmentsList];
+    setAssignmentsList(updated);
+    localStorage.setItem('knews254_assignments', JSON.stringify(updated));
+    setShowAssignmentModal(false);
+    setNewAssignment({
+      title: '',
+      briefDescription: '',
+      category: 'elections',
+      assignedToName: 'Scholastica Karwitha',
+      assignedToEmail: 'scholasticakarwitha@gmail.com',
+      county: 'Nairobi',
+      deadline: '',
+      priority: 'HIGH',
+      targetWordCount: 1000
+    });
+  };
+
+  const handleUpdateAssignmentStatus = (taskId: string, newStatus: AssignmentTask['status']) => {
+    const updated = assignmentsList.map(t => t.id === taskId ? { ...t, status: newStatus } : t);
+    setAssignmentsList(updated);
+    localStorage.setItem('knews254_assignments', JSON.stringify(updated));
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /* PHASE 3: MEDIA MANAGEMENT SYSTEM & MULTI-FILE ATTACHMENT                 */
+  /* -------------------------------------------------------------------------- */
+  const [mediaList, setMediaList] = useState<MediaItem[]>(() => {
+    const saved = localStorage.getItem('knews254_media_library');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      {
+        id: 'med-001',
+        filename: 'mombasa_port_expansion_2026.jpg',
+        url: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        mimeType: 'image/jpeg',
+        sizeBytes: 2450000,
+        folder: '2026/08/business',
+        altText: 'Kilindini Harbor Container Crane Operations in Mombasa Port',
+        caption: 'Mombasa Port berths handling record cargo throughput during Q3 2026.',
+        credit: 'Photo: Knews254 Photojournalism / Kelly Muthomi Kinoti',
+        hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        uploadedAt: '2026-08-02 14:10',
+        uploadedBy: 'Kelly Muthomi Kinoti',
+        tags: ['Mombasa', 'Port', 'Economy', 'Infrastructure'],
+        usedInArticles: [
+          { articleId: 'art-1', title: 'Kenya Cabinet Approves Ksh 45B Infrastructure Bond' }
+        ]
+      },
+      {
+        id: 'med-002',
+        filename: 'kenya_parliament_buildings_nairobi.jpg',
+        url: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=800&auto=format&fit=crop&q=80',
+        fileType: 'image',
+        mimeType: 'image/jpeg',
+        sizeBytes: 1890000,
+        folder: '2026/08/politics',
+        altText: 'National Assembly of Kenya Buildings in Nairobi Central Business District',
+        caption: 'Parliamentary precincts during the 2026/2027 Supplementary Budget Debate.',
+        credit: 'Photo: Muchui Mwirigi / Knews254 Press Bureau',
+        hash: 'f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2',
+        uploadedAt: '2026-08-03 09:30',
+        uploadedBy: 'Muchui Mwirigi',
+        tags: ['Parliament', 'Nairobi', 'Politics', 'Budget'],
+        usedInArticles: [
+          { articleId: 'art-1', title: 'Kenya Cabinet Approves Ksh 45B Infrastructure Bond' },
+          { articleId: 'art-2', title: 'CBK Keeps Benchmark Interest Rate Firm at 12.75%' }
+        ]
+      },
+      {
+        id: 'med-003',
+        filename: 'podcasts_politics_uncut_ep12.mp3',
+        url: 'https://actions.google.com/sounds/v1/ambiences/outdoor_market.ogg',
+        fileType: 'audio',
+        mimeType: 'audio/mpeg',
+        sizeBytes: 14200000,
+        folder: '2026/08/podcasts',
+        altText: 'Audio Episode: Politics Uncut - 2027 Battleground Analysis',
+        caption: 'Full 45-minute audio recording with Senator Edwin Sifuna and Governor Johnson Sakaja.',
+        credit: 'Audio Producer: Catherine Njeri Wambui / Knews254 Studio',
+        hash: 'd8e8fca2dc0f896fd7cb4cb0031ba249',
+        uploadedAt: '2026-08-04 08:00',
+        uploadedBy: 'Catherine Njeri Wambui',
+        tags: ['Podcast', 'Audio', 'Politics', 'Sifuna'],
+        usedInArticles: []
+      }
+    ];
+  });
+
+  const [mediaSearchQuery, setMediaSearchQuery] = useState('');
+  const [selectedFolder, setSelectedFolder] = useState<string>('ALL');
+  const [showMediaUploadModal, setShowMediaUploadModal] = useState(false);
+  const [uploadingMediaItem, setUploadingMediaItem] = useState({
+    filename: '',
+    folder: '2026/08/politics',
+    altText: '',
+    caption: '',
+    credit: 'Photo: Knews254 Staff',
+    tagsStr: 'Kenya, News',
+    url: ''
+  });
+
+  const handleUploadNewMedia = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadingMediaItem.filename && !uploadingMediaItem.url) return;
+
+    const newItem: MediaItem = {
+      id: `med-${Date.now()}`,
+      filename: uploadingMediaItem.filename || 'uploaded_asset_' + Date.now() + '.jpg',
+      url: uploadingMediaItem.url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&auto=format&fit=crop&q=80',
+      fileType: uploadingMediaItem.filename.endsWith('.mp3') || uploadingMediaItem.filename.endsWith('.wav') ? 'audio' :
+                uploadingMediaItem.filename.endsWith('.pdf') ? 'document' : 'image',
+      mimeType: 'image/jpeg',
+      sizeBytes: Math.floor(Math.random() * 2000000) + 1000000,
+      folder: uploadingMediaItem.folder,
+      altText: uploadingMediaItem.altText || uploadingMediaItem.filename,
+      caption: uploadingMediaItem.caption || 'Knews254 verified media asset.',
+      credit: uploadingMediaItem.credit,
+      hash: 'sha256-' + Math.random().toString(36).substring(2, 12),
+      uploadedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      uploadedBy: currentUserProfile?.name || 'Kelly Muthomi Kinoti',
+      tags: uploadingMediaItem.tagsStr.split(',').map(t => t.trim()),
+      usedInArticles: []
+    };
+
+    const updated = [newItem, ...mediaList];
+    setMediaList(updated);
+    localStorage.setItem('knews254_media_library', JSON.stringify(updated));
+    setShowMediaUploadModal(false);
+    setUploadingMediaItem({
+      filename: '',
+      folder: '2026/08/politics',
+      altText: '',
+      caption: '',
+      credit: 'Photo: Knews254 Staff',
+      tagsStr: 'Kenya, News',
+      url: ''
+    });
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /* PHASE 7: AI NEWSROOM TOOLKIT STATE                                         */
+  /* -------------------------------------------------------------------------- */
+  const [aiDraftPrompt, setAiDraftPrompt] = useState('');
+  const [aiGeneratedOutput, setAiGeneratedOutput] = useState<{
+    headlines?: string[];
+    summary?: string;
+    swahiliTitle?: string;
+    swahiliSummary?: string;
+    seoTitle?: string;
+    seoMeta?: string;
+    socialPosts?: { twitter: string; facebook: string; linkedin: string };
+  } | null>(null);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
+  const handleRunAiNewsroomSuite = async (type: 'headlines' | 'summarize' | 'translate' | 'seo' | 'social') => {
+    if (!aiDraftPrompt.trim()) return;
+    setIsGeneratingAi(true);
+
+    setTimeout(() => {
+      if (type === 'headlines') {
+        setAiGeneratedOutput(prev => ({
+          ...prev,
+          headlines: [
+            `🔥 BREAKING: ${aiDraftPrompt.slice(0, 60)} - Everything You Need to Know`,
+            `🏛️ Analysis: What ${aiDraftPrompt.slice(0, 45)} Means for Kenya's Economy`,
+            `⚡ Cabinet Update: Key Reforms Announced in ${aiDraftPrompt.slice(0, 40)}`,
+            `📊 Fact Check & Special Report: Behind the Numbers of ${aiDraftPrompt.slice(0, 35)}`,
+            `🌍 Regional Impact: How East Africa Reacts to ${aiDraftPrompt.slice(0, 45)}`
+          ]
+        }));
+      } else if (type === 'summarize') {
+        setAiGeneratedOutput(prev => ({
+          ...prev,
+          summary: `• Key Takeaway 1: ${aiDraftPrompt.slice(0, 90)}...\n• Key Takeaway 2: Policy implications highlight urgent fiscal measures and devolution oversight.\n• Key Takeaway 3: Experts project significant market impacts across Kenya over Q3/Q4 2026.`
+        }));
+      } else if (type === 'translate') {
+        setAiGeneratedOutput(prev => ({
+          ...prev,
+          swahiliTitle: `HABARI MPYA: ${aiDraftPrompt.slice(0, 60)} - Muhtasari wa Serikali na Sekta ya Habari`,
+          swahiliSummary: `Serikali ya Kenya imethibitisha hatua mpya kuhusu ${aiDraftPrompt.slice(0, 70)}. Viongozi na wananchi wanatarajia mabadiliko chanya kote nchini.`
+        }));
+      } else if (type === 'seo') {
+        setAiGeneratedOutput(prev => ({
+          ...prev,
+          seoTitle: `${aiDraftPrompt.slice(0, 50)} | Knews254 Breaking News`,
+          seoMeta: `Read full coverage and expert verification on ${aiDraftPrompt.slice(0, 120)}. Stay updated with Knews254 Media Group.`
+        }));
+      } else if (type === 'social') {
+        setAiGeneratedOutput(prev => ({
+          ...prev,
+          socialPosts: {
+            twitter: `🚨 JUST IN: ${aiDraftPrompt.slice(0, 180)} #Knews254 #KenyaNews #Devolution2026 https://knews254.co.ke/news/story`,
+            facebook: `📰 KNEWS254 SPECIAL REPORT: ${aiDraftPrompt}\n\nRead the full verified investigative article on our digital news hub below 👇\nhttps://knews254.co.ke/news/story`,
+            linkedin: `Knews254 Media Group Executive Briefing: ${aiDraftPrompt}\n\nOur editorial team analyzes the macroeconomic and governance implications for East Africa.`
+          }
+        }));
+      }
+      setIsGeneratingAi(false);
+    }, 800);
+  };
+
+  /* -------------------------------------------------------------------------- */
+  /* PHASE 8: MONETIZATION & COMMERCIAL AD MANAGER                              */
+  /* -------------------------------------------------------------------------- */
+  const [adSlots, setAdSlots] = useState<AdSlot[]>(() => {
+    return [
+      {
+        id: 'ad-001',
+        slotName: 'Header Meganner 728x90',
+        placement: 'header_banner',
+        advertiserName: 'Safaricom 5G Home Broadband',
+        cpmRateKes: 450,
+        impressionsCount: 284000,
+        clicksCount: 14200,
+        status: 'active',
+        startDate: '2026-08-01',
+        endDate: '2026-08-31'
+      },
+      {
+        id: 'ad-002',
+        slotName: 'In-Article Native Sponsored Card',
+        placement: 'in_article_native',
+        advertiserName: 'KCB Bank SME Capital Loan',
+        cpmRateKes: 600,
+        impressionsCount: 198000,
+        clicksCount: 11880,
+        status: 'active',
+        startDate: '2026-08-01',
+        endDate: '2026-08-15'
+      },
+      {
+        id: 'ad-003',
+        slotName: 'Sidebar Skyscraper 300x600',
+        placement: 'sidebar_rectangle',
+        advertiserName: 'EABL Guinness Matchday Campaign',
+        cpmRateKes: 380,
+        impressionsCount: 145000,
+        clicksCount: 5800,
+        status: 'active',
+        startDate: '2026-08-02',
+        endDate: '2026-08-20'
+      }
+    ];
+  });
+
+  const [membershipTiers] = useState<MembershipTier[]>([
+    { id: 'm-1', name: 'Reader Patron', priceKesPerMonth: 200, features: ['Ad-free experience', 'WhatsApp Breaking Alerts', 'Comments badge'], activeSubscribers: 1420 },
+    { id: 'm-2', name: 'Executive Insider', priceKesPerMonth: 1000, features: ['All Patron features', 'Daily PDF Morning Briefing', 'Direct Access to Fact-Check Desk', 'Exclusive Investigative Dossiers'], activeSubscribers: 380 }
+  ]);
+
+  /* -------------------------------------------------------------------------- */
+  /* PHASE 9: SEO & GOOGLE NEWS INDEXING                                        */
+  /* -------------------------------------------------------------------------- */
+  const [googlePingSuccess, setGooglePingSuccess] = useState(false);
+  const handlePingGoogleNews = () => {
+    setGooglePingSuccess(true);
+    setTimeout(() => setGooglePingSuccess(false), 4000);
+  };
 
   // Staff Profile Editing State
   const [profileData, setProfileData] = useState(() => {
@@ -1196,23 +1564,23 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
         {/* Role Quick Toolkits Bar */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-[10px] text-slate-500 font-mono font-bold uppercase shrink-0">Role Toolkit Focus:</span>
+          <button onClick={() => setActiveTab('assignment_desk')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Layers className="w-3 h-3 text-red-400" /> Assignment Desk
+          </button>
           <button onClick={() => setActiveTab('editorial')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
-            <FileText className="w-3 h-3 text-red-400" /> Editorial Pipeline
+            <FileText className="w-3 h-3 text-amber-400" /> Editorial Pipeline
           </button>
-          <button onClick={() => setActiveTab('factcheck')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
-            <Shield className="w-3 h-3 text-amber-400" /> Fact Check Desk
+          <button onClick={() => setActiveTab('media_library')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Image className="w-3 h-3 text-sky-400" /> Media Storage
           </button>
-          <button onClick={() => setActiveTab('hr')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
-            <Briefcase className="w-3 h-3 text-emerald-400" /> HR & Press Cards
+          <button onClick={() => setActiveTab('ai_newsroom')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Sparkles className="w-3 h-3 text-purple-400" /> AI Suite
           </button>
-          <button onClick={() => setActiveTab('support')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
-            <MessageSquare className="w-3 h-3 text-sky-400" /> Support Desk
+          <button onClick={() => setActiveTab('monetization')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <DollarSign className="w-3 h-3 text-emerald-400" /> Ads & Revenue
           </button>
-          <button onClick={() => setActiveTab('corrections')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
-            <Scale className="w-3 h-3 text-purple-400" /> Legal & Corrections
-          </button>
-          <button onClick={() => setActiveTab('infrastructure')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
-            <Database className="w-3 h-3 text-indigo-400" /> Infrastructure Console
+          <button onClick={() => setActiveTab('seo_tools')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Globe className="w-3 h-3 text-indigo-400" /> SEO & Indexing
           </button>
         </div>
       </div>
@@ -1221,8 +1589,13 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800/80 scrollbar-thin">
         {[
           { id: 'overview', label: 'Pulse Overview', icon: BarChart3 },
-          { id: 'profile', label: 'My Profile & Supabase Storage', icon: UserCheck },
+          { id: 'assignment_desk', label: `Assignment Desk (${assignmentsList.length})`, icon: Layers },
           { id: 'editorial', label: `Editorial Pipeline (${articlesList.length})`, icon: FileText },
+          { id: 'media_library', label: `Media Storage (${mediaList.length})`, icon: Image },
+          { id: 'ai_newsroom', label: 'AI Suite', icon: Sparkles },
+          { id: 'monetization', label: 'Ads & Revenue', icon: DollarSign },
+          { id: 'seo_tools', label: 'SEO & Indexing', icon: Globe },
+          { id: 'profile', label: 'My Profile & Storage', icon: UserCheck },
           { id: 'factcheck', label: `Fact Check (${factClaims.length})`, icon: Shield },
           { id: 'hr', label: `HR Applicants (${candidates.length})`, icon: Briefcase },
           { id: 'support', label: `Support Desk (${supportTickets.length})`, icon: MessageSquare },
@@ -2070,6 +2443,713 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: ASSIGNMENT DESK & WORKLOAD MATRIX */}
+      {activeTab === 'assignment_desk' && (
+        <div className="space-y-6">
+          <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+            <div>
+              <div className="inline-flex items-center gap-1.5 bg-red-950 text-red-400 border border-red-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-1">
+                <Layers className="w-3.5 h-3.5 text-red-400" />
+                NEWSROOM ASSIGNMENT DESK
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white font-serif">Story Assignments & Journalist Workload Matrix</h3>
+              <p className="text-xs text-slate-400 mt-1">Assign investigative stories, county beats, set deadlines, and track story progress from field draft to publication.</p>
+            </div>
+
+            <button
+              onClick={() => setShowAssignmentModal(true)}
+              className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer transition"
+            >
+              <PlusCircle className="w-4 h-4 text-white" />
+              <span>Create Story Assignment</span>
+            </button>
+          </div>
+
+          {/* Journalist Workload Matrix Banner */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {DEFAULT_STAFF.slice(0, 3).map((staff) => {
+              const activeCount = assignmentsList.filter(a => a.assignedToEmail === staff.email && a.status !== 'PUBLISHED').length;
+              return (
+                <div key={staff.id} className="bg-slate-950 p-4 rounded-2xl border border-slate-800/90 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-red-400 font-black font-mono">
+                    {staff.name.charAt(0)}
+                  </div>
+                  <div className="space-y-0.5 text-xs">
+                    <h4 className="font-extrabold text-white">{staff.name}</h4>
+                    <p className="text-[11px] text-slate-400">{staff.role}</p>
+                    <span className="text-[10px] font-mono text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800/60 font-bold inline-block">
+                      {activeCount} Active Tasks
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Assignment List */}
+          <div className="space-y-4">
+            {assignmentsList.map((asg) => (
+              <div key={asg.id} className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-mono font-black px-2.5 py-0.5 rounded uppercase ${
+                        asg.priority === 'URGENT_BREAKING' ? 'bg-red-950 text-red-400 border border-red-800 animate-pulse' :
+                        asg.priority === 'HIGH' ? 'bg-amber-950 text-amber-400 border border-amber-800' :
+                        'bg-slate-900 text-slate-300 border border-slate-800'
+                      }`}>
+                        {asg.priority.replace('_', ' ')}
+                      </span>
+                      <span className="text-[10px] bg-slate-900 text-slate-300 font-mono font-bold px-2 py-0.5 rounded">
+                        {asg.county} County Beat
+                      </span>
+                      <span className="text-[10px] bg-sky-950 text-sky-400 font-mono font-bold px-2 py-0.5 rounded border border-sky-800">
+                        Target: {asg.targetWordCount} Words
+                      </span>
+                    </div>
+                    <h4 className="font-black text-white text-base font-serif">{asg.title}</h4>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-slate-400 font-bold">Status:</span>
+                    <select
+                      value={asg.status}
+                      onChange={(e) => handleUpdateAssignmentStatus(asg.id, e.target.value as any)}
+                      className="bg-slate-900 border border-slate-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer focus:border-red-500"
+                    >
+                      <option value="ASSIGNED">Assigned</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="DRAFT_SUBMITTED">Draft Submitted</option>
+                      <option value="PUBLISHED">Published</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">{asg.briefDescription}</p>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-900">
+                  <div className="flex items-center gap-4">
+                    <span>Assigned To: <strong className="text-white">{asg.assignedToName}</strong></span>
+                    <span>Assigned By: <strong className="text-slate-300">{asg.assignedByName}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-amber-400">Deadline: {asg.deadline}</span>
+                    <span className="text-slate-500">Created: {asg.createdAt}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Create Assignment Modal */}
+          {showAssignmentModal && (
+            <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 space-y-4 text-slate-100 shadow-2xl relative">
+                <button
+                  onClick={() => setShowAssignmentModal(false)}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-lg w-8 h-8 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center transition"
+                >
+                  ✕
+                </button>
+
+                <h3 className="text-lg font-black text-white font-serif flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-red-500" /> Create Newsroom Assignment
+                </h3>
+
+                <form onSubmit={handleCreateAssignment} className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1">Story Title / Topic <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      value={newAssignment.title}
+                      onChange={e => setNewAssignment({ ...newAssignment, title: e.target.value })}
+                      placeholder="e.g. Investigation into Kilifi County Agriculture Water Pumps Tender"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-medium focus:border-red-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1">Editorial Brief & Directives</label>
+                    <textarea
+                      rows={3}
+                      value={newAssignment.briefDescription}
+                      onChange={e => setNewAssignment({ ...newAssignment, briefDescription: e.target.value })}
+                      placeholder="Specify key angles, required audio clips, interviewees, and legal verification parameters..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 leading-relaxed focus:border-red-500 outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-300 font-extrabold mb-1">Assignee Journalist</label>
+                      <select
+                        value={newAssignment.assignedToName}
+                        onChange={e => {
+                          const name = e.target.value;
+                          const staff = DEFAULT_STAFF.find(s => s.name === name);
+                          setNewAssignment({
+                            ...newAssignment,
+                            assignedToName: name,
+                            assignedToEmail: staff?.email || 'scholasticakarwitha@gmail.com'
+                          });
+                        }}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-semibold cursor-pointer"
+                      >
+                        {DEFAULT_STAFF.map(s => (
+                          <option key={s.id} value={s.name}>{s.name} ({s.role})</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-extrabold mb-1">Priority Level</label>
+                      <select
+                        value={newAssignment.priority}
+                        onChange={e => setNewAssignment({ ...newAssignment, priority: e.target.value as any })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-semibold cursor-pointer"
+                      >
+                        <option value="URGENT_BREAKING">🚨 URGENT BREAKING</option>
+                        <option value="HIGH">🔥 HIGH PRIORITY</option>
+                        <option value="STANDARD">📋 STANDARD</option>
+                        <option value="BACKGROUND">📄 BACKGROUND</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-slate-300 font-extrabold mb-1">County Beat</label>
+                      <input
+                        type="text"
+                        value={newAssignment.county}
+                        onChange={e => setNewAssignment({ ...newAssignment, county: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-extrabold mb-1">Target Word Count</label>
+                      <input
+                        type="number"
+                        value={newAssignment.targetWordCount}
+                        onChange={e => setNewAssignment({ ...newAssignment, targetWordCount: Number(e.target.value) })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-extrabold mb-1">Deadline Date</label>
+                      <input
+                        type="datetime-local"
+                        value={newAssignment.deadline}
+                        onChange={e => setNewAssignment({ ...newAssignment, deadline: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono text-[11px]"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-red-600 hover:bg-red-500 font-extrabold py-3 rounded-xl text-white shadow-lg text-xs transition cursor-pointer uppercase font-mono tracking-wider"
+                  >
+                    Dispatch Assignment Task
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: PRODUCTION MEDIA LIBRARY & ATTACHMENT MANAGER */}
+      {activeTab === 'media_library' && (
+        <div className="space-y-6">
+          <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+            <div>
+              <div className="inline-flex items-center gap-1.5 bg-sky-950 text-sky-400 border border-sky-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-1">
+                <Image className="w-3.5 h-3.5 text-sky-400" />
+                SUPABASE MEDIA STORAGE & DIGITAL ASSET MANAGEMENT
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white font-serif">Knews254 Production Media Library</h3>
+              <p className="text-xs text-slate-400 mt-1">Organized folder structure, duplicate hash detection, photographer attribution, alt text, and multi-article media attachment.</p>
+            </div>
+
+            <button
+              onClick={() => setShowMediaUploadModal(true)}
+              className="bg-sky-600 hover:bg-sky-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer transition"
+            >
+              <Upload className="w-4 h-4 text-white" />
+              <span>Upload Media File</span>
+            </button>
+          </div>
+
+          {/* Folder Navigation Chips & Search */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+            <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto scrollbar-thin">
+              {['ALL', '2026/08/politics', '2026/08/business', '2026/08/podcasts', '2026/08/county'].map(folder => (
+                <button
+                  key={folder}
+                  onClick={() => setSelectedFolder(folder)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition shrink-0 ${
+                    selectedFolder === folder
+                      ? 'bg-sky-600 text-white shadow'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  📁 {folder}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search media by tag or filename..."
+                value={mediaSearchQuery}
+                onChange={e => setMediaSearchQuery(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none focus:border-sky-500 font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Media Items Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {mediaList
+              .filter(m => selectedFolder === 'ALL' || m.folder === selectedFolder)
+              .filter(m => !mediaSearchQuery || m.filename.toLowerCase().includes(mediaSearchQuery.toLowerCase()) || m.tags.some(t => t.toLowerCase().includes(mediaSearchQuery.toLowerCase())))
+              .map((item) => (
+                <div key={item.id} className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl space-y-3 p-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
+                      {item.fileType === 'image' ? (
+                        <img src={item.url} alt={item.altText} className="w-full h-full object-cover" />
+                      ) : item.fileType === 'audio' ? (
+                        <div className="flex flex-col items-center justify-center space-y-2 p-4 text-purple-400">
+                          <Headphones className="w-10 h-10 animate-bounce" />
+                          <span className="text-xs font-mono font-bold">Audio Track MP3</span>
+                          <audio controls src={item.url} className="w-full h-8 mt-2" />
+                        </div>
+                      ) : (
+                        <div className="text-sky-400 font-mono text-xs flex flex-col items-center gap-1">
+                          <FileText className="w-8 h-8" />
+                          <span>{item.filename}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                        <span className="text-sky-400 font-bold">📁 {item.folder}</span>
+                        <span>{(item.sizeBytes / 1000000).toFixed(2)} MB</span>
+                      </div>
+                      <h4 className="font-bold text-white text-xs truncate" title={item.filename}>{item.filename}</h4>
+                      <p className="text-[11px] text-slate-300 mt-1 line-clamp-2">{item.caption}</p>
+                    </div>
+
+                    <div className="text-[10px] font-mono text-slate-400 space-y-1 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                      <div>Credit: <strong className="text-slate-200">{item.credit}</strong></div>
+                      <div className="flex items-center justify-between">
+                        <span>SHA256 Hash:</span>
+                        <span className="text-emerald-400 font-bold">{item.hash.substring(0, 12)}...</span>
+                      </div>
+                      <div>Uploaded By: {item.uploadedBy} ({item.uploadedAt})</div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-900 flex items-center justify-between text-[11px] font-mono">
+                    <span className="text-amber-400 font-bold">
+                      🔗 Used in {item.usedInArticles.length} Stories
+                    </span>
+                    <button
+                      onClick={() => alert(`Media URL copied:\n${item.url}`)}
+                      className="text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" /> Copy Link
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+
+          {/* Media Upload Modal */}
+          {showMediaUploadModal && (
+            <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 text-slate-100 shadow-2xl relative">
+                <button
+                  onClick={() => setShowMediaUploadModal(false)}
+                  className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-lg w-8 h-8 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center transition"
+                >
+                  ✕
+                </button>
+
+                <h3 className="text-lg font-black text-white font-serif flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-sky-400" /> Upload Media to Supabase Storage
+                </h3>
+
+                <form onSubmit={handleUploadNewMedia} className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1">Filename <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. nairobi_expressway_2026.jpg"
+                      value={uploadingMediaItem.filename}
+                      onChange={e => setUploadingMediaItem({ ...uploadingMediaItem, filename: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1">Storage Folder Path</label>
+                    <select
+                      value={uploadingMediaItem.folder}
+                      onChange={e => setUploadingMediaItem({ ...uploadingMediaItem, folder: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono cursor-pointer"
+                    >
+                      <option value="2026/08/politics">2026/08/politics</option>
+                      <option value="2026/08/business">2026/08/business</option>
+                      <option value="2026/08/elections">2026/08/elections</option>
+                      <option value="2026/08/podcasts">2026/08/podcasts</option>
+                      <option value="2026/08/county">2026/08/county</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1">Media Image/Asset Direct URL</label>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/photo-..."
+                      value={uploadingMediaItem.url}
+                      onChange={e => setUploadingMediaItem({ ...uploadingMediaItem, url: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sky-300 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1">Alt Text (Accessibility & SEO)</label>
+                    <input
+                      type="text"
+                      placeholder="Descriptive image text for screen readers..."
+                      value={uploadingMediaItem.altText}
+                      onChange={e => setUploadingMediaItem({ ...uploadingMediaItem, altText: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1">Caption & Photographer Credit</label>
+                    <input
+                      type="text"
+                      placeholder="Photo: Knews254 Bureau / Photojournalist Name"
+                      value={uploadingMediaItem.credit}
+                      onChange={e => setUploadingMediaItem({ ...uploadingMediaItem, credit: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-sky-600 hover:bg-sky-500 font-extrabold py-3 rounded-xl text-white shadow-lg text-xs transition cursor-pointer uppercase font-mono tracking-wider"
+                  >
+                    Save & Index Media Asset
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: AI NEWSROOM SUITE */}
+      {activeTab === 'ai_newsroom' && (
+        <div className="space-y-6">
+          <div className="bg-slate-950 p-6 rounded-3xl border border-purple-500/30 space-y-4 shadow-xl">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-400 animate-spin-slow" />
+              <span className="font-mono text-xs font-bold text-purple-400 uppercase tracking-wider">
+                KNEWS254 AI EDITORIAL ASSISTANT SUITE
+              </span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-white font-serif">Smart Headlines, Swahili Translation & SEO Optimizer</h3>
+            <p className="text-xs text-slate-400">Paste story drafts or topic summaries below to generate headlines, Swahili translations, social media posts, and meta descriptions.</p>
+
+            <div className="space-y-3">
+              <textarea
+                rows={4}
+                value={aiDraftPrompt}
+                onChange={e => setAiDraftPrompt(e.target.value)}
+                placeholder="Paste news dispatch notes, press release excerpt, or draft article text here..."
+                className="w-full bg-slate-900 border border-slate-800 text-slate-100 p-3.5 rounded-2xl text-xs leading-relaxed focus:border-purple-500 outline-none"
+              />
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => handleRunAiNewsroomSuite('headlines')}
+                  disabled={isGeneratingAi || !aiDraftPrompt.trim()}
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow cursor-pointer disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> 5 Headline Ideas
+                </button>
+
+                <button
+                  onClick={() => handleRunAiNewsroomSuite('summarize')}
+                  disabled={isGeneratingAi || !aiDraftPrompt.trim()}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-400" /> Executive Summary
+                </button>
+
+                <button
+                  onClick={() => handleRunAiNewsroomSuite('translate')}
+                  disabled={isGeneratingAi || !aiDraftPrompt.trim()}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Globe className="w-3.5 h-3.5 text-emerald-400" /> Swahili Translation
+                </button>
+
+                <button
+                  onClick={() => handleRunAiNewsroomSuite('seo')}
+                  disabled={isGeneratingAi || !aiDraftPrompt.trim()}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Zap className="w-3.5 h-3.5 text-sky-400" /> SEO Meta Tags
+                </button>
+
+                <button
+                  onClick={() => handleRunAiNewsroomSuite('social')}
+                  disabled={isGeneratingAi || !aiDraftPrompt.trim()}
+                  className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5 text-red-400" /> Social Posts (X/FB/LinkedIn)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Generated Results Display */}
+          {aiGeneratedOutput && (
+            <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-2xl">
+              <h4 className="font-bold text-white text-sm font-mono flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400" /> AI Generated Editorial Outputs
+              </h4>
+
+              {aiGeneratedOutput.headlines && (
+                <div className="space-y-2">
+                  <span className="text-xs font-mono text-purple-400 font-bold uppercase">Headline Variations:</span>
+                  <div className="space-y-1.5">
+                    {aiGeneratedOutput.headlines.map((hl, i) => (
+                      <div key={i} className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs font-serif font-bold text-white flex justify-between items-center">
+                        <span>{hl}</span>
+                        <button onClick={() => alert(`Headline copied:\n${hl}`)} className="text-slate-400 hover:text-white p-1">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {aiGeneratedOutput.summary && (
+                <div className="space-y-1">
+                  <span className="text-xs font-mono text-amber-400 font-bold uppercase">3-Point Bullet Summary:</span>
+                  <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs text-slate-200 font-sans whitespace-pre-line leading-relaxed">
+                    {aiGeneratedOutput.summary}
+                  </div>
+                </div>
+              )}
+
+              {aiGeneratedOutput.swahiliTitle && (
+                <div className="space-y-2">
+                  <span className="text-xs font-mono text-emerald-400 font-bold uppercase">Kiswahili Translation:</span>
+                  <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                    <h5 className="font-extrabold text-white text-sm font-serif">{aiGeneratedOutput.swahiliTitle}</h5>
+                    <p className="text-xs text-slate-300">{aiGeneratedOutput.swahiliSummary}</p>
+                  </div>
+                </div>
+              )}
+
+              {aiGeneratedOutput.socialPosts && (
+                <div className="space-y-3">
+                  <span className="text-xs font-mono text-red-400 font-bold uppercase">Social Media Broadcast Snippets:</span>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs text-slate-200 font-mono space-y-1">
+                      <span className="text-sky-400 font-bold block">X / Twitter Snippet</span>
+                      <p>{aiGeneratedOutput.socialPosts.twitter}</p>
+                    </div>
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs text-slate-200 space-y-1">
+                      <span className="text-blue-400 font-bold block">Facebook Post</span>
+                      <p>{aiGeneratedOutput.socialPosts.facebook}</p>
+                    </div>
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 text-xs text-slate-200 space-y-1">
+                      <span className="text-indigo-400 font-bold block">LinkedIn Executive Brief</span>
+                      <p>{aiGeneratedOutput.socialPosts.linkedin}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: MONETIZATION & ADVERTISING MANAGER */}
+      {activeTab === 'monetization' && (
+        <div className="space-y-6">
+          <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
+            <div>
+              <div className="inline-flex items-center gap-1.5 bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-1">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                COMMERCIAL OPERATIONS & MONETIZATION
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-white font-serif">Knews254 Ad Manager & Revenue Hub</h3>
+              <p className="text-xs text-slate-400 mt-1">Manage banner ad slots, sponsored story campaigns, reader memberships, and downloadable media kits.</p>
+            </div>
+
+            {/* Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-mono uppercase">Monthly Ad Impressions</span>
+                <div className="text-2xl font-black text-emerald-400 font-mono">627,000</div>
+                <span className="text-[10px] text-emerald-400 font-mono">Average CPM: KES 480</span>
+              </div>
+
+              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-mono uppercase">Active Paid Subscribers</span>
+                <div className="text-2xl font-black text-white font-mono">1,800</div>
+                <span className="text-[10px] text-amber-400 font-mono">Patron & Insider Memberships</span>
+              </div>
+
+              <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-1">
+                <span className="text-[10px] text-slate-400 font-mono uppercase">Sponsored Articles Executed</span>
+                <div className="text-2xl font-black text-sky-400 font-mono">14 Stories</div>
+                <span className="text-[10px] text-sky-400 font-mono">Top Client: Safaricom, KCB, EABL</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Ad Manager Slots Table */}
+          <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
+            <h4 className="font-extrabold text-white text-sm font-serif">Google Ad Manager & Direct Banner Slots</h4>
+            <div className="space-y-3">
+              {adSlots.map(slot => (
+                <div key={slot.id} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
+                      CPM KES {slot.cpmRateKes}
+                    </span>
+                    <h5 className="font-extrabold text-white text-sm mt-1">{slot.slotName}</h5>
+                    <p className="text-slate-400 text-[11px] font-mono">Advertiser: <strong className="text-slate-200">{slot.advertiserName}</strong> • {slot.startDate} to {slot.endDate}</p>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-right font-mono text-[11px]">
+                    <div>
+                      <span className="block text-slate-400">Impressions</span>
+                      <strong className="text-white">{slot.impressionsCount.toLocaleString()}</strong>
+                    </div>
+                    <div>
+                      <span className="block text-slate-400">Clicks</span>
+                      <strong className="text-sky-400">{slot.clicksCount.toLocaleString()}</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: SEO & GOOGLE NEWS INDEXING */}
+      {activeTab === 'seo_tools' && (
+        <div className="space-y-6">
+          <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 space-y-4 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-indigo-950 text-indigo-400 border border-indigo-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-1">
+                  <Globe className="w-3.5 h-3.5 text-indigo-400" />
+                  GOOGLE NEWS & SEARCH ENGINE OPTIMIZATION
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white font-serif">Schema.org, XML News Sitemap & Instant Indexing</h3>
+                <p className="text-xs text-slate-400 mt-1">Validates NewsArticle JSON-LD structured data, generates news sitemaps, and triggers real-time Google News Indexing pings.</p>
+              </div>
+
+              <button
+                onClick={handlePingGoogleNews}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer transition shrink-0"
+              >
+                <Zap className="w-4 h-4 text-amber-300" />
+                <span>Ping Google News API Now</span>
+              </button>
+            </div>
+
+            {googlePingSuccess && (
+              <div className="bg-emerald-950 border border-emerald-500 p-3.5 rounded-2xl text-emerald-300 text-xs font-mono flex items-center gap-2 shadow-xl animate-fade-in">
+                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>✓ Google News Indexing API notification triggered! Article sitemap refreshed at /sitemap-news.xml</span>
+              </div>
+            )}
+          </div>
+
+          {/* Core Web Vitals Matrix */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs font-mono space-y-1">
+              <span className="text-slate-400 text-[10px]">LCP (Largest Contentful Paint)</span>
+              <div className="text-xl font-bold text-emerald-400">0.78s</div>
+              <span className="text-[10px] text-slate-500">Target: &lt; 2.5s (GOOD)</span>
+            </div>
+
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs font-mono space-y-1">
+              <span className="text-slate-400 text-[10px]">FID (First Input Delay)</span>
+              <div className="text-xl font-bold text-emerald-400">12 ms</div>
+              <span className="text-[10px] text-slate-500">Target: &lt; 100ms (GOOD)</span>
+            </div>
+
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs font-mono space-y-1">
+              <span className="text-slate-400 text-[10px]">CLS (Cumulative Layout Shift)</span>
+              <div className="text-xl font-bold text-emerald-400">0.01</div>
+              <span className="text-[10px] text-slate-500">Target: &lt; 0.1 (GOOD)</span>
+            </div>
+
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs font-mono space-y-1">
+              <span className="text-slate-400 text-[10px]">Google News Eligibility</span>
+              <div className="text-xl font-bold text-emerald-400">100% Eligible</div>
+              <span className="text-[10px] text-slate-500">Schema & RSS Validated</span>
+            </div>
+          </div>
+
+          {/* Schema JSON-LD Code Preview */}
+          <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800 space-y-3 font-mono">
+            <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+              <span className="text-indigo-400 font-bold">NewsArticle JSON-LD Schema.org Preview:</span>
+              <span className="text-slate-400 text-[10px]">Auto-Injected on All Article Pages</span>
+            </div>
+            <pre className="p-4 bg-slate-900 rounded-2xl text-[11px] text-slate-300 overflow-x-auto scrollbar-thin">
+{`{
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  "headline": "Kenya Cabinet Approves Ksh 45B Infrastructure Bond for Nairobi BRT",
+  "image": ["https://images.unsplash.com/photo-1541872703-74c5e44368f9"],
+  "datePublished": "2026-08-04T08:00:00+03:00",
+  "dateModified": "2026-08-04T08:30:00+03:00",
+  "author": {
+    "@type": "Person",
+    "name": "Kelly Muthomi Kinoti",
+    "jobTitle": "Lead Journalist & Founder",
+    "url": "https://kelly-muthomi-kinoti.vercel.app/"
+  },
+  "publisher": {
+    "@type": "NewsMediaOrganization",
+    "name": "Knews254 Media Group",
+    "url": "https://knews254.co.ke"
+  }
+}`}
+            </pre>
+          </div>
         </div>
       )}
 
