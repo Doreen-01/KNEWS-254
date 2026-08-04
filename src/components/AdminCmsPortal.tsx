@@ -5,6 +5,7 @@ import { uploadMediaToSupabase, isSupabaseConfigured, supabase } from '../lib/su
 import { articleService } from '../services/articleService';
 import { authService, UserProfile } from '../services/authService';
 import { AUTHORS_LIST } from '../data/newsData';
+import { NewsCategory } from '../types';
 import {
   Sliders,
   CheckSquare,
@@ -14,6 +15,7 @@ import {
   AlertCircle,
   FileText,
   Plus,
+  PlusCircle,
   Shield,
   Briefcase,
   MessageSquare,
@@ -52,7 +54,11 @@ import {
   HardDrive,
   Globe,
   User,
-  Image
+  Image,
+  Vote,
+  Building,
+  Headphones,
+  BookOpen
 } from 'lucide-react';
 
 interface StaffUser {
@@ -68,7 +74,36 @@ interface StaffUser {
   lastLogin: string;
 }
 
-export const AdminCmsPortal: React.FC = () => {
+interface AdminCmsPortalProps {
+  onNavigateCategory?: (category: NewsCategory) => void;
+  onNavigateTab?: (tab: 'platform' | 'prd') => void;
+  onClose?: () => void;
+}
+
+export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
+  onNavigateCategory,
+  onNavigateTab,
+  onClose
+}) => {
+  // Category label -> slug mapping
+  const CATEGORY_SLUG_MAP: Record<string, string> = {
+    'Blog': 'blog',
+    'Blog & Opinion': 'blog',
+    'Politics': 'politics',
+    'Elections 2027': 'elections',
+    'County News': 'county',
+    'Business': 'business',
+    'Economy': 'economy',
+    'Tech & AI': 'technology',
+    'Sports': 'sports',
+    'Agriculture': 'agriculture',
+    'Public Health': 'health',
+    'Fact Check': 'fact-checking',
+    'Audio & Podcasts': 'podcasts',
+    'Entertainment': 'entertainment',
+    'Investigations': 'investigations',
+    'Opinion': 'opinion'
+  };
   // Default Vetted Newsroom Staff Members (Directory Only)
   const DEFAULT_STAFF: StaffUser[] = [
     {
@@ -458,11 +493,15 @@ export const AdminCmsPortal: React.FC = () => {
   const [newDraft, setNewDraft] = useState({
     title: '',
     category: 'Politics',
-    author: 'Logged-in Journalist',
+    county: 'Nairobi',
+    author: 'Kelly Muthomi Kinoti',
+    summary: '',
     content: '',
     priority: 'Normal',
     imagePreview: '',
     fileName: '',
+    imageCaption: '',
+    imageCredit: '',
     targetStatus: 'published'
   });
 
@@ -516,21 +555,30 @@ export const AdminCmsPortal: React.FC = () => {
 
   const handleCreateDraft = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDraft.title.trim()) return;
+    if (!newDraft.title.trim()) {
+      setDraftError('Headline title is required.');
+      return;
+    }
+    if (!newDraft.content.trim()) {
+      setDraftError('Article body content is required.');
+      return;
+    }
 
     setIsSubmittingDraft(true);
     setDraftError(null);
 
     const authorName = currentUser?.name || newDraft.author || 'Kelly Muthomi Kinoti';
-    const catSlug = newDraft.category.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const catSlug = CATEGORY_SLUG_MAP[newDraft.category] || newDraft.category.toLowerCase().replace(/[^a-z0-9]/g, '');
 
     const createResult = await articleService.createArticle({
-      title: newDraft.title,
-      summary: newDraft.content.substring(0, 180) + '...',
-      body: newDraft.content,
+      title: newDraft.title.trim(),
+      summary: newDraft.summary.trim() || newDraft.content.substring(0, 180) + '...',
+      body: newDraft.content.trim(),
       category: catSlug || 'politics',
-      county: 'Nairobi',
+      county: newDraft.county || 'Nairobi',
       imageUrl: newDraft.imagePreview || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
+      imageCaption: newDraft.imageCaption,
+      imageCredit: newDraft.imageCredit,
       isBreaking: newDraft.priority === 'Breaking News',
       isFeatured: newDraft.priority === 'High Priority',
       authorId: currentUser?.id,
@@ -548,11 +596,15 @@ export const AdminCmsPortal: React.FC = () => {
     setNewDraft({
       title: '',
       category: 'Politics',
-      author: 'Logged-in Journalist',
+      county: 'Nairobi',
+      author: 'Kelly Muthomi Kinoti',
+      summary: '',
       content: '',
       priority: 'Normal',
       imagePreview: '',
       fileName: '',
+      imageCaption: '',
+      imageCredit: '',
       targetStatus: 'published'
     });
 
@@ -957,28 +1009,40 @@ export const AdminCmsPortal: React.FC = () => {
           </p>
         </div>
 
-        {/* Staff Role Switcher Card */}
-        <div className="bg-slate-950 p-2.5 rounded-2xl border border-slate-800/90 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-2.5 shrink-0">
-          <div className="flex items-center gap-1.5 px-2">
-            <UserCheck className="w-4 h-4 text-emerald-400" />
-            <span className="text-[10px] text-slate-400 font-mono font-bold uppercase">Staff Role:</span>
-          </div>
-          <select
-            value={currentRole}
-            onChange={(e) => setCurrentRole(e.target.value)}
-            className="bg-slate-900 border border-slate-700 text-red-400 font-extrabold text-xs px-3.5 py-2 rounded-xl focus:outline-none focus:border-red-500 cursor-pointer shadow-inner"
+        {/* Action Controls & Staff Role Switcher */}
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            onClick={() => setShowDraftModal(true)}
+            className="bg-gradient-to-r from-red-600 via-amber-600 to-red-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-red-500/40 flex items-center gap-2 font-mono uppercase tracking-wider cursor-pointer hover:scale-105 transition-all"
           >
-            <option>Super Administrator</option>
-            <option>Managing Editor</option>
-            <option>Editor-in-Chief</option>
-            <option>Reporter / Journalist</option>
-            <option>Fact Checker</option>
-            <option>Human Resources Manager</option>
-            <option>Customer Support Officer</option>
-            <option>Community Moderator</option>
-            <option>Legal Reviewer</option>
-            <option>Advertising Manager</option>
-          </select>
+            <PlusCircle className="w-4 h-4 text-white animate-pulse" />
+            <span>Post & Publish Story</span>
+          </button>
+
+          {/* Staff Role Switcher Card */}
+          <div className="bg-slate-950 p-2.5 rounded-2xl border border-slate-800/90 shadow-xl flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
+            <div className="flex items-center gap-1.5 px-2">
+              <UserCheck className="w-4 h-4 text-emerald-400" />
+              <span className="text-[10px] text-slate-400 font-mono font-bold uppercase">Staff Role:</span>
+            </div>
+            <select
+              value={currentRole}
+              onChange={(e) => setCurrentRole(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-red-400 font-extrabold text-xs px-3.5 py-2 rounded-xl focus:outline-none focus:border-red-500 cursor-pointer shadow-inner"
+            >
+              <option>Super Administrator</option>
+              <option>Managing Editor</option>
+              <option>Editor-in-Chief</option>
+              <option>Reporter / Journalist</option>
+              <option>Podcast Host & Audio Producer</option>
+              <option>Fact Checker</option>
+              <option>Human Resources Manager</option>
+              <option>Customer Support Officer</option>
+              <option>Community Moderator</option>
+              <option>Legal Reviewer</option>
+              <option>Advertising Manager</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1051,6 +1115,108 @@ export const AdminCmsPortal: React.FC = () => {
         </div>
       </div>
 
+      {/* Active Role Specialized Desk & Capabilities Banner */}
+      <div className="bg-slate-950 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="bg-gradient-to-r from-red-600 to-amber-600 text-white font-mono font-black text-[10px] px-3 py-0.5 rounded-full uppercase tracking-wider shadow">
+                Active Staff Desk: {currentRole}
+              </span>
+              <span className="bg-emerald-950 text-emerald-400 border border-emerald-800 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-emerald-400" />
+                Universal Dispatch Right Enabled
+              </span>
+            </div>
+            <h3 className="text-lg font-black text-white font-serif">
+              {currentRole === 'Reporter / Journalist' && '📰 Journalist & Personal Blog Dispatch Workbench'}
+              {currentRole === 'Managing Editor' && '📋 Managing Editorial Command & Approval Desk'}
+              {currentRole === 'Editor-in-Chief' && '👑 Editor-in-Chief Executive Editorial Desk'}
+              {currentRole === 'Podcast Host & Audio Producer' && '🎙️ Knews254 Audio & Podcast Broadcast Studio'}
+              {currentRole === 'Fact Checker' && '🛡️ Forensic Fact-Checking & Truth Verification Desk'}
+              {currentRole === 'Human Resources Manager' && '💼 Staff Onboarding, Press Cards & HR Desk'}
+              {currentRole === 'Customer Support Officer' && '💬 Reader Relations & Public Support Desk'}
+              {currentRole === 'Community Moderator' && '⭐ Reader Community Governance & Comment Desk'}
+              {currentRole === 'Legal Reviewer' && '⚖️ Legal Compliance, Defamation & Corrections Desk'}
+              {currentRole === 'Advertising Manager' && '💲 Commercial & Sponsored Campaign Desk'}
+              {currentRole === 'Super Administrator' && '⚡ Executive Governance & Infrastructure Supreme Command'}
+            </h3>
+            <p className="text-slate-400 text-xs">
+              {currentRole === 'Reporter / Journalist' && 'Compose news dispatches, cover county beats, post personal blogs, attach media assets, and submit investigative stories.'}
+              {currentRole === 'Managing Editor' && 'Review submitted articles, approve/reject dispatches, manage headline positions, and trigger breaking news alerts.'}
+              {currentRole === 'Editor-in-Chief' && 'Oversee overall newsroom policy, approve top featured stories, direct investigative beats, and maintain journalistic integrity.'}
+              {currentRole === 'Podcast Host & Audio Producer' && 'Record audio episodes, publish podcasts, write companion articles, and manage audio feed distribution.'}
+              {currentRole === 'Fact Checker' && 'Verify politician claims, issue official Truth Ratings (True, Mostly True, False, Pants on Fire), and audit citations.'}
+              {currentRole === 'Human Resources Manager' && 'Vet newsroom applicants, issue accredited Knews254 Press Cards, track staff clearance, and manage staff rotas.'}
+              {currentRole === 'Customer Support Officer' && 'Handle reader tickets, dispatch WhatsApp desk responses, assist subscribers, and log public inquiries.'}
+              {currentRole === 'Community Moderator' && 'Moderate reader comments, enforce community rules, resolve user flags, and manage reader trust scores.'}
+              {currentRole === 'Legal Reviewer' && 'Scan stories for defamation risks, issue pre-publication legal sign-offs, and track official retractions.'}
+              {currentRole === 'Advertising Manager' && 'Manage sponsored stories, banner advertising slots, advertiser CPM analytics, and commercial campaign booking.'}
+              {currentRole === 'Super Administrator' && 'Complete system governance across all 11 portal modules, Supabase database controls, CDN caching, and security logs.'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={() => setShowDraftModal(true)}
+              className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer transition"
+            >
+              <PlusCircle className="w-4 h-4 text-white" />
+              <span>Compose Story / Blog Post</span>
+            </button>
+
+            {currentRole === 'Podcast Host & Audio Producer' && (
+              <button
+                onClick={() => {
+                  setNewDraft(prev => ({ ...prev, category: 'Audio & Podcasts' }));
+                  setShowDraftModal(true);
+                }}
+                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-2xl transition flex items-center gap-1.5 shadow cursor-pointer"
+              >
+                <Headphones className="w-4 h-4" />
+                <span>Upload Podcast Audio</span>
+              </button>
+            )}
+
+            {currentRole === 'Fact Checker' && (
+              <button
+                onClick={() => {
+                  setNewDraft(prev => ({ ...prev, category: 'Fact Check' }));
+                  setShowDraftModal(true);
+                }}
+                className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-2xl transition flex items-center gap-1.5 shadow cursor-pointer"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Post Fact Check Report</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Role Quick Toolkits Bar */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-[10px] text-slate-500 font-mono font-bold uppercase shrink-0">Role Toolkit Focus:</span>
+          <button onClick={() => setActiveTab('editorial')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <FileText className="w-3 h-3 text-red-400" /> Editorial Pipeline
+          </button>
+          <button onClick={() => setActiveTab('factcheck')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Shield className="w-3 h-3 text-amber-400" /> Fact Check Desk
+          </button>
+          <button onClick={() => setActiveTab('hr')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Briefcase className="w-3 h-3 text-emerald-400" /> HR & Press Cards
+          </button>
+          <button onClick={() => setActiveTab('support')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <MessageSquare className="w-3 h-3 text-sky-400" /> Support Desk
+          </button>
+          <button onClick={() => setActiveTab('corrections')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Scale className="w-3 h-3 text-purple-400" /> Legal & Corrections
+          </button>
+          <button onClick={() => setActiveTab('infrastructure')} className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer">
+            <Database className="w-3 h-3 text-indigo-400" /> Infrastructure Console
+          </button>
+        </div>
+      </div>
+
       {/* Navigation Tabs Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-800/80 scrollbar-thin">
         {[
@@ -1085,7 +1251,80 @@ export const AdminCmsPortal: React.FC = () => {
         })}
       </div>
 
-      {/* TAB: MY STAFF PROFILE & SUPABASE STORAGE */}
+      {/* Live Public Dashboards Shortcut Bar */}
+      <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800 flex items-center justify-between gap-3 overflow-x-auto text-xs scrollbar-thin shadow-inner">
+        <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px] font-bold uppercase shrink-0">
+          <Globe className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+          <span>Quick Jump To Public Dashboards:</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+              if (onNavigateCategory) onNavigateCategory('elections');
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-emerald-800/80 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer text-[11px]"
+          >
+            <Vote className="w-3.5 h-3.5" />
+            Elections 2027
+          </button>
+
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+              if (onNavigateCategory) onNavigateCategory('county');
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-sky-400 border border-sky-800/80 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer text-[11px]"
+          >
+            <Building className="w-3.5 h-3.5" />
+            47 Counties
+          </button>
+
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+              if (onNavigateCategory) onNavigateCategory('fact-checking');
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-amber-400 border border-amber-800/80 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer text-[11px]"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            Fact Check Hub
+          </button>
+
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+              if (onNavigateCategory) onNavigateCategory('podcasts');
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-purple-400 border border-purple-800/80 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer text-[11px]"
+          >
+            <Headphones className="w-3.5 h-3.5" />
+            Audio & Podcasts
+          </button>
+
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+              if (onNavigateCategory) onNavigateCategory('live');
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-red-400 border border-red-800/80 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer text-[11px]"
+          >
+            <Radio className="w-3.5 h-3.5 text-red-500 animate-pulse" />
+            Live Feed
+          </button>
+
+          <button
+            onClick={() => {
+              if (onClose) onClose();
+              if (onNavigateTab) onNavigateTab('prd');
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-indigo-400 border border-indigo-800/80 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer text-[11px]"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            Master PRD
+          </button>
+        </div>
+      </div>
       {activeTab === 'profile' && (
         <div className="space-y-6">
           <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
@@ -1342,6 +1581,57 @@ export const AdminCmsPortal: React.FC = () => {
       {/* TAB 1: OVERVIEW & REAL-TIME PULSE */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Overview Quick Actions Bar */}
+          <div className="bg-slate-950 p-4 rounded-3xl border border-red-500/30 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-400 animate-spin-slow" />
+              <span className="font-extrabold text-xs text-white uppercase font-mono tracking-wider">
+                Editorial Quick Dispatch & Management Desk
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => setShowDraftModal(true)}
+                className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-lg cursor-pointer"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                Post Story / Article
+              </button>
+
+              <button
+                onClick={() => setActiveTab('editorial')}
+                className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileText className="w-3.5 h-3.5 text-red-400" />
+                Editorial Pipeline ({articlesList.length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('factcheck')}
+                className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-400" />
+                Fact Checks ({factClaims.length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('hr')}
+                className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
+                HR Vetting ({vettingQueue.length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('infrastructure')}
+                className="bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Database className="w-3.5 h-3.5 text-sky-400" />
+                Infra Console
+              </button>
+            </div>
+          </div>
           {/* Top 4 Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Active Readers */}
@@ -1575,49 +1865,99 @@ export const AdminCmsPortal: React.FC = () => {
 
           {/* Draft Modal */}
           {showDraftModal && (
-            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 relative text-slate-100 shadow-2xl">
-                <button onClick={() => setShowDraftModal(false)} className="absolute top-5 right-5 text-slate-400 hover:text-white font-bold text-lg">✕</button>
-                <h3 className="text-lg font-black border-b border-slate-800 pb-3 text-white font-serif">Draft New Article</h3>
+            <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-5 relative text-slate-100 shadow-2xl my-auto">
+                <button
+                  onClick={() => setShowDraftModal(false)}
+                  className="absolute top-5 right-5 text-slate-400 hover:text-white font-bold text-xl w-8 h-8 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center transition"
+                >
+                  ✕
+                </button>
+                <div>
+                  <div className="inline-flex items-center gap-1.5 bg-red-950 text-red-400 border border-red-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-1">
+                    <FileText className="w-3.5 h-3.5 text-red-500" />
+                    Knews254 Article & News Dispatch Studio
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-white font-serif">Compose & Publish News Dispatch</h3>
+                </div>
 
-                <form onSubmit={handleCreateDraft} className="space-y-4">
+                {draftError && (
+                  <div className="bg-red-950/90 border border-red-500/80 text-red-200 p-3.5 rounded-2xl text-xs flex items-center gap-2.5 font-mono shadow-lg">
+                    <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                    <span className="font-bold">{draftError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleCreateDraft} className="space-y-4 text-xs">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">Headline / Title</label>
+                    <label className="block text-slate-300 font-extrabold mb-1.5">Headline Title <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       required
                       value={newDraft.title}
                       onChange={e => setNewDraft({ ...newDraft, title: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
-                      placeholder="Enter article headline..."
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-red-500 font-semibold"
+                      placeholder="e.g. Kenya Cabinet Approves Ksh 45B Infrastructure Bond for Nairobi BRT"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1.5">Category / Beat</label>
+                      <label className="block text-slate-300 font-extrabold mb-1.5">Category / Beat</label>
                       <select
                         value={newDraft.category}
                         onChange={e => setNewDraft({ ...newDraft, category: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-semibold cursor-pointer"
                       >
-                        <option>Blog</option>
-                        <option>Blog & Opinion</option>
                         <option>Politics</option>
-                        <option>Business</option>
                         <option>Elections 2027</option>
+                        <option>Blog & Opinion</option>
+                        <option>Business</option>
+                        <option>Economy</option>
                         <option>County News</option>
-                        <option>Agriculture</option>
+                        <option>Tech & AI</option>
                         <option>Sports</option>
+                        <option>Agriculture</option>
+                        <option>Public Health</option>
+                        <option>Fact Check</option>
+                        <option>Audio & Podcasts</option>
+                        <option>Entertainment</option>
+                        <option>Investigations</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-300 mb-1.5">Priority Level</label>
+                      <label className="block text-slate-300 font-extrabold mb-1.5">County Coverage</label>
+                      <select
+                        value={newDraft.county}
+                        onChange={e => setNewDraft({ ...newDraft, county: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-semibold cursor-pointer"
+                      >
+                        <option value="Nairobi">Nairobi City</option>
+                        <option value="Mombasa">Mombasa</option>
+                        <option value="Kisumu">Kisumu</option>
+                        <option value="Nakuru">Nakuru</option>
+                        <option value="Uasin Gishu">Uasin Gishu (Eldoret)</option>
+                        <option value="Kiambu">Kiambu</option>
+                        <option value="Meru">Meru</option>
+                        <option value="Machakos">Machakos</option>
+                        <option value="Nyeri">Nyeri</option>
+                        <option value="Kilifi">Kilifi</option>
+                        <option value="Garissa">Garissa</option>
+                        <option value="Kakamega">Kakamega</option>
+                        <option value="Kericho">Kericho</option>
+                        <option value="Murang'a">Murang'a</option>
+                        <option value="Trans Nzoia">Trans Nzoia</option>
+                        <option value="All 47 Counties">National / All 47 Counties</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-extrabold mb-1.5">Priority Flag</label>
                       <select
                         value={newDraft.priority}
                         onChange={e => setNewDraft({ ...newDraft, priority: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-semibold cursor-pointer"
                       >
                         <option>Normal</option>
                         <option>High Priority</option>
@@ -1627,19 +1967,32 @@ export const AdminCmsPortal: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">Feature Cover Image / Photo Upload</label>
+                    <label className="block text-slate-300 font-extrabold mb-1.5">Publishing Status Action</label>
+                    <select
+                      value={newDraft.targetStatus}
+                      onChange={e => setNewDraft({ ...newDraft, targetStatus: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-amber-400 font-extrabold cursor-pointer"
+                    >
+                      <option value="published">🚀 Publish Immediately to Live Feed (Instant)</option>
+                      <option value="submitted">📝 Submit to Editorial Review Queue</option>
+                      <option value="draft">📁 Save as Private Draft</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1.5">Feature Cover Photo / Media Upload</label>
                     
                     {newDraft.imagePreview ? (
                       <div className="relative rounded-2xl border border-slate-700 overflow-hidden bg-slate-950 p-2 flex items-center gap-3">
-                        <img src={newDraft.imagePreview} alt="Cover Preview" className="w-16 h-16 object-cover rounded-xl" />
+                        <img src={newDraft.imagePreview} alt="Cover Preview" className="w-16 h-16 object-cover rounded-xl shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-white truncate">{newDraft.fileName || 'Uploaded_Photo.png'}</p>
-                          <p className="text-[10px] text-emerald-400 font-mono font-bold">✓ Ready to attach to draft</p>
+                          <p className="text-[10px] text-emerald-400 font-mono font-bold">✓ Attached to dispatch</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setNewDraft({ ...newDraft, imagePreview: '', fileName: '' })}
-                          className="bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 text-[10px] font-bold px-2.5 py-1 rounded-xl"
+                          className="bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 text-[10px] font-bold px-2.5 py-1 rounded-xl cursor-pointer"
                         >
                           Remove
                         </button>
@@ -1667,26 +2020,51 @@ export const AdminCmsPortal: React.FC = () => {
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                         />
                         <Upload className="w-6 h-6 text-red-400 mx-auto mb-1.5" />
-                        <p className="text-xs font-bold text-white">Drag & drop photo here or click to browse</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Supports PNG, JPG, WEBP • Max 15MB</p>
+                        <p className="text-xs font-bold text-white">Drag & drop cover photo here or click to browse</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WEBP • Auto-optimized to Supabase Cloud Storage</p>
                       </div>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">Article Summary / Lead Text</label>
-                    <textarea
-                      rows={4}
-                      required
-                      value={newDraft.content}
-                      onChange={e => setNewDraft({ ...newDraft, content: e.target.value })}
+                    <label className="block text-slate-300 font-extrabold mb-1.5">Lead Story Excerpt / Summary</label>
+                    <input
+                      type="text"
+                      value={newDraft.summary}
+                      onChange={e => setNewDraft({ ...newDraft, summary: e.target.value })}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
-                      placeholder="Type lead story summary..."
+                      placeholder="Short 1-2 sentence lead excerpt for card previews..."
                     />
                   </div>
 
-                  <button type="submit" className="w-full bg-red-600 hover:bg-red-500 font-extrabold text-xs py-3 rounded-xl text-white shadow-lg">
-                    Submit Article to Editorial Queue
+                  <div>
+                    <label className="block text-slate-300 font-extrabold mb-1.5">Full Article Body Text <span className="text-red-500">*</span></label>
+                    <textarea
+                      rows={6}
+                      required
+                      value={newDraft.content}
+                      onChange={e => setNewDraft({ ...newDraft, content: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-red-500 font-sans leading-relaxed"
+                      placeholder="Write or paste full newsroom article body paragraphs..."
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingDraft}
+                    className="w-full bg-gradient-to-r from-red-600 via-amber-600 to-red-600 hover:from-red-500 hover:to-amber-500 font-extrabold text-xs py-3.5 rounded-2xl text-white shadow-xl border border-red-500/40 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 uppercase tracking-wider font-mono"
+                  >
+                    {isSubmittingDraft ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        <span>Saving Dispatch to Supabase Database...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 text-white" />
+                        <span>{newDraft.targetStatus === 'published' ? 'Publish Story Directly to Live Site' : 'Submit Story to Editorial Pipeline'}</span>
+                      </>
+                    )}
                   </button>
                 </form>
               </div>

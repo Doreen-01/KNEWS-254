@@ -161,7 +161,17 @@ export default function App() {
                 Close CMS Portal
               </button>
             </div>
-            <AdminCmsPortal />
+            <AdminCmsPortal
+              onClose={() => setShowAdminPortal(false)}
+              onNavigateCategory={(cat) => {
+                handleSelectCategory(cat);
+                setShowAdminPortal(false);
+              }}
+              onNavigateTab={(tab) => {
+                setActiveTab(tab);
+                setShowAdminPortal(false);
+              }}
+            />
           </div>
         </div>
       )}
