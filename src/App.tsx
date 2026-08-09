@@ -16,7 +16,7 @@ import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { Article, NewsCategory } from './types';
 import { articleService } from './services/articleService';
 import { SeoManager } from './components/SeoManager';
-import { Flame, Sparkles, Sliders, ArrowRight, ShieldCheck, PhoneCall, RefreshCw, AlertCircle, FileText, Home, Building2, Vote, FileCheck } from 'lucide-react';
+import { Flame, Sparkles, Sliders, ArrowRight, ShieldCheck, PhoneCall, RefreshCw, AlertCircle, FileText, Home, Building2, Vote, FileCheck, Database } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'platform' | 'prd'>('platform');
@@ -30,19 +30,17 @@ export default function App() {
   const [selectedArticleDetail, setSelectedArticleDetail] = useState<Article | null>(null);
   const [language, setLanguage] = useState<'en' | 'sw' | 'sheng'>('en');
   const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [isFallbackArticles, setIsFallbackArticles] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
 
-  // Sync Published Articles from Supabase exclusively
+  // Sync Published Articles from Supabase
   const loadArticles = async () => {
     setIsLoadingArticles(true);
     setArticlesError(null);
     try {
       const result = await articleService.listPublishedArticles();
-      if (result.error) {
-        setArticlesError(result.error);
-        setArticles([]);
-      } else {
-        setArticles(result.data || []);
-      }
+      setArticles(result.data || []);
+      setIsFallbackArticles(Boolean(result.isFallback));
     } catch (err: any) {
       setArticlesError(err?.message || 'Failed to load articles from Supabase.');
       setArticles([]);
@@ -51,29 +49,85 @@ export default function App() {
     }
   };
 
+  const handleSeedDatabase = async () => {
+    setIsSeeding(true);
+    try {
+      const res = await articleService.seedInitialArticles();
+      if (res.success) {
+        await loadArticles();
+      } else if (res.error) {
+        alert('Seeding error: ' + res.error);
+      }
+    } catch (err: any) {
+      alert('Failed to seed: ' + err?.message);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   useEffect(() => {
     loadArticles();
 
-    // Check query params for deep linking
-    if (typeof window !== 'undefined') {
+    // Check pathname and query params for deep linking and redirects
+    const parseUrlAndRoute = () => {
+      if (typeof window === 'undefined') return;
+
+      const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
       const params = new URLSearchParams(window.location.search);
       const articleParam = params.get('article') || params.get('id');
       const catParam = params.get('cat') || params.get('category');
-      
-      if (catParam) {
-        setSelectedCategory(catParam as NewsCategory);
-      }
 
-      if (articleParam) {
-        articleService.getArticleBySlug(articleParam).then(art => {
+      // 1. Article path/param routing (/article/slug or ?article=slug)
+      if (path.startsWith('article/')) {
+        const slug = path.replace('article/', '');
+        if (slug) {
+          articleService.getArticleBySlug(slug).then((art) => {
+            if (art) setSelectedArticleDetail(art);
+          });
+        }
+      } else if (articleParam) {
+        articleService.getArticleBySlug(articleParam).then((art) => {
           if (art) setSelectedArticleDetail(art);
         });
       }
-    }
+
+      // 2. Category path/param routing (/category/cat or /cat or ?cat=cat)
+      if (path.startsWith('category/')) {
+        const cat = path.replace('category/', '') as NewsCategory;
+        if (cat) setSelectedCategory(cat);
+      } else if (catParam) {
+        setSelectedCategory(catParam as NewsCategory);
+      } else if (path && path !== 'index.html' && path !== 'prd') {
+        const validCategories: NewsCategory[] = [
+          'home', 'breaking', 'politics', 'business', 'county', 'elections',
+          'investigations', 'fact-checking', 'opinion', 'international', 'technology', 'sports',
+          'lifestyle', 'entertainment', 'gallery', 'authors', 'about', 'contact',
+          'advertise', 'careers', 'editorial-policy', 'ethics-policy', 'privacy-policy',
+          'cookie-policy', 'terms-of-service', 'corrections-policy', 'ai-policy',
+          'factcheck-methodology', 'anonymous-sources', 'transparency-report',
+          'funding-policy', 'community-guidelines', 'takedown-policy', 'reviews',
+          'how-we-review', 'faq', 'help-center'
+        ];
+        if (validCategories.includes(path as NewsCategory)) {
+          setSelectedCategory(path as NewsCategory);
+        }
+      } else if (path === 'prd') {
+        setActiveTab('prd');
+      }
+    };
+
+    parseUrlAndRoute();
+
+    const handlePopState = () => parseUrlAndRoute();
+    window.addEventListener('popstate', handlePopState);
 
     const handleArticlesUpdate = () => loadArticles();
     window.addEventListener('knews254_articles_updated', handleArticlesUpdate);
-    return () => window.removeEventListener('knews254_articles_updated', handleArticlesUpdate);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('knews254_articles_updated', handleArticlesUpdate);
+    };
   }, []);
 
   // Filter Articles by search query
@@ -93,7 +147,24 @@ export default function App() {
 
   const handleSelectCategory = (cat: NewsCategory) => {
     setSelectedCategory(cat);
+    if (typeof window !== 'undefined') {
+      const newUrl = cat === 'home' ? '/' : `/?cat=${encodeURIComponent(cat)}`;
+      window.history.pushState({ category: cat }, '', newUrl);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectArticleDetail = (art: Article | null) => {
+    setSelectedArticleDetail(art);
+    if (typeof window !== 'undefined') {
+      if (art) {
+        const articleSlug = art.slug || art.id;
+        window.history.pushState({ article: articleSlug }, '', `/?article=${encodeURIComponent(articleSlug)}`);
+      } else {
+        const catUrl = selectedCategory === 'home' ? '/' : `/?cat=${encodeURIComponent(selectedCategory)}`;
+        window.history.pushState({ category: selectedCategory }, '', catUrl);
+      }
+    }
   };
 
   const isSpecialtyCategory = [
@@ -189,7 +260,7 @@ export default function App() {
           <CategoryPage
             category={selectedCategory}
             articles={articles}
-            onSelectArticle={(art) => setSelectedArticleDetail(art)}
+            onSelectArticle={(art) => handleSelectArticleDetail(art)}
             onSelectCategory={handleSelectCategory}
           />
         ) : (
@@ -240,6 +311,34 @@ export default function App() {
                 </div>
               )}
 
+              {/* Fallback Notice & Seed Banner */}
+              {!isLoadingArticles && isFallbackArticles && articles.length > 0 && (
+                <div className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-4 my-4 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-amber-200">
+                  <div className="flex items-center gap-3">
+                    <Database className="w-5 h-5 text-amber-400 shrink-0" />
+                    <p className="text-xs">
+                      <strong>Connected to Supabase!</strong> Your database currently has 0 published stories. Displaying default news articles below.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={handleSeedDatabase}
+                      disabled={isSeeding}
+                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition shadow cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {isSeeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
+                      {isSeeding ? 'Seeding...' : 'Seed Stories to Supabase'}
+                    </button>
+                    <button
+                      onClick={() => setShowAdminPortal(true)}
+                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs px-3.5 py-2 rounded-xl transition cursor-pointer"
+                    >
+                      CMS Admin
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Empty State */}
               {!isLoadingArticles && !articlesError && articles.length === 0 && (
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-4 my-6 max-w-2xl mx-auto">
@@ -250,12 +349,22 @@ export default function App() {
                       The Supabase articles database has no stories with status <code className="text-amber-400 bg-slate-950 px-1 py-0.5 rounded">published</code> yet.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setShowAdminPortal(true)}
-                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
-                  >
-                    Open CMS Portal to Publish Stories
-                  </button>
+                  <div className="flex items-center justify-center gap-3 pt-2">
+                    <button
+                      onClick={handleSeedDatabase}
+                      disabled={isSeeding}
+                      className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
+                    >
+                      {isSeeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
+                      {isSeeding ? 'Seeding...' : 'Seed Sample Stories to Supabase'}
+                    </button>
+                    <button
+                      onClick={() => setShowAdminPortal(true)}
+                      className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
+                    >
+                      Open CMS Portal
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -267,7 +376,7 @@ export default function App() {
                     <ArticleCard
                       article={leadArticle}
                       variant="hero"
-                      onSelect={(art) => setSelectedArticleDetail(art)}
+                      onSelect={(art) => handleSelectArticleDetail(art)}
                       onOpenAiBrief={(art) => {
                         setActiveArticleForAi(art);
                         setIsAiAssistantOpen(true);
@@ -290,7 +399,7 @@ export default function App() {
                           key={art.id}
                           article={art}
                           variant="horizontal"
-                          onSelect={(article) => setSelectedArticleDetail(article)}
+                          onSelect={(article) => handleSelectArticleDetail(article)}
                           onOpenAiBrief={(article) => {
                             setActiveArticleForAi(article);
                             setIsAiAssistantOpen(true);
@@ -331,7 +440,7 @@ export default function App() {
                       key={art.id}
                       article={art}
                       variant="standard"
-                      onSelect={(article) => setSelectedArticleDetail(article)}
+                      onSelect={(article) => handleSelectArticleDetail(article)}
                       onOpenAiBrief={(article) => {
                         setActiveArticleForAi(article);
                         setIsAiAssistantOpen(true);
@@ -373,10 +482,10 @@ export default function App() {
       {/* Article Full Modal Viewer */}
       <ArticleDetailModal
         article={selectedArticleDetail}
-        onClose={() => setSelectedArticleDetail(null)}
+        onClose={() => handleSelectArticleDetail(null)}
         onSelectCategory={handleSelectCategory}
         allArticles={articles}
-        onSelectArticle={(art) => setSelectedArticleDetail(art)}
+        onSelectArticle={(art) => handleSelectArticleDetail(art)}
       />
 
       {/* AI Assistant Modal */}

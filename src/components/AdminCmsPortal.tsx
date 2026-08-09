@@ -339,6 +339,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isGoogleLoggingIn, setIsGoogleLoggingIn] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -357,6 +358,16 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     const profile = await authService.getCurrentProfile();
     setCurrentUserProfile(profile);
     setIsLoggingIn(false);
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoginError('');
+    setIsGoogleLoggingIn(true);
+    const res = await authService.loginWithGoogle();
+    if (!res.success) {
+      setLoginError(res.error || 'Google Sign-In failed.');
+      setIsGoogleLoggingIn(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -1167,7 +1178,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
 
             <button
               type="submit"
-              disabled={isLoggingIn}
+              disabled={isLoggingIn || isGoogleLoggingIn}
               className="w-full bg-gradient-to-r from-red-600 via-red-700 to-red-600 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-xs sm:text-sm py-3.5 px-6 rounded-xl shadow-xl border border-red-500/50 flex items-center justify-center gap-2 transition disabled:opacity-50 uppercase tracking-wider cursor-pointer"
             >
               {isLoggingIn ? (
@@ -1181,6 +1192,46 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                   Authenticate & Unlock Command Center
                 </>
               )}
+            </button>
+
+            <div className="relative my-3 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-800" />
+              </div>
+              <div className="relative bg-slate-900 px-3 text-[10px] uppercase font-mono font-bold text-slate-500">
+                OR SINGLE SIGN-ON (SSO)
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoggingIn || isLoggingIn}
+              className="w-full bg-slate-950 hover:bg-slate-800 active:bg-slate-950 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl border border-slate-700/80 hover:border-slate-600 flex items-center justify-center gap-3 transition shadow cursor-pointer disabled:opacity-50"
+            >
+              {isGoogleLoggingIn ? (
+                <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+              ) : (
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.2 9 5 12 5z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.8s.7 5.1 1.9 7.5l3.7-2.9c-.2-.7-.3-1.4-.3-2.2z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.2-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"
+                  />
+                </svg>
+              )}
+              <span>{isGoogleLoggingIn ? 'Redirecting to Google Auth...' : 'Sign in with Google'}</span>
             </button>
           </form>
 

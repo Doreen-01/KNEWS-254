@@ -48,9 +48,11 @@ export const authService = {
 
       const userId = session.user.id;
       const userEmail = session.user.email || '';
+      const userName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || userEmail.split('@')[0] || 'Knews254 Staff';
+      const userAvatar = session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '';
 
       // 1. Query public.profiles by auth_user_id
-      let { data: profile, error: profileErr } = await supabase
+      let { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('auth_user_id', userId)
@@ -74,22 +76,58 @@ export const authService = {
         }
       }
 
+      // 3. If still no profile in database, auto-provision for authenticated user
+      if (!profile && userEmail) {
+        try {
+          const { data: createdProfile } = await supabase
+            .from('profiles')
+            .insert([{
+              auth_user_id: userId,
+              name: userName,
+              email: userEmail,
+              role: 'journalist',
+              status: 'ACTIVE',
+              profile_image: userAvatar,
+              department: 'Newsroom Operations',
+              biography: 'Authenticated via Google OAuth'
+            }])
+            .select('*')
+            .maybeSingle();
+
+          if (createdProfile) {
+            profile = createdProfile;
+          }
+        } catch (e) {
+          console.warn('Auto profile creation in Supabase failed, using fallback profile:', e);
+        }
+      }
+
       if (profile) {
         return {
           id: profile.id,
           auth_user_id: userId,
-          name: profile.name || userEmail.split('@')[0] || 'Knews254 Staff',
+          name: profile.name || userName,
           email: profile.email || userEmail,
           role: profile.role as UserRole,
           status: profile.status || 'ACTIVE',
-          profile_image: profile.profile_image || '',
+          profile_image: profile.profile_image || userAvatar,
           department: profile.department || 'Newsroom Operations',
           biography: profile.biography || ''
         };
       }
 
-      // No profile in public.profiles
-      return null;
+      // 4. Session profile for authenticated OAuth user
+      return {
+        id: userId,
+        auth_user_id: userId,
+        name: userName,
+        email: userEmail,
+        role: 'journalist',
+        status: 'ACTIVE',
+        profile_image: userAvatar,
+        department: 'Newsroom Operations',
+        biography: 'Authenticated via Google OAuth'
+      };
     } catch (err) {
       console.error('Supabase auth session error:', err);
       return null;

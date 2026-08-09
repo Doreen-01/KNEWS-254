@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured, linkMediaToArticle } from '../lib/supabase';
 import { Article, NewsCategory } from '../types';
+import { FEATURED_ARTICLES } from '../data/newsData';
 
 export type ArticleStatus = 
   | 'draft'
@@ -132,10 +133,11 @@ export const articleService = {
   /**
    * List all public published articles (status = 'published', deleted_at IS NULL, published_at <= NOW())
    */
-  async listPublishedArticles(): Promise<{ data: Article[]; error?: string }> {
+  async listPublishedArticles(): Promise<{ data: Article[]; error?: string; isFallback?: boolean }> {
     if (!isSupabaseConfigured() || !supabase) {
       return { 
-        data: [], 
+        data: FEATURED_ARTICLES, 
+        isFallback: true,
         error: 'Supabase credentials missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.' 
       };
     }
@@ -151,13 +153,56 @@ export const articleService = {
         .order('published_at', { ascending: false });
 
       if (error) {
-        return { data: [], error: error.message };
+        return { data: FEATURED_ARTICLES, isFallback: true, error: error.message };
       }
 
       const articles = (data || []).map(mapDbRecordToArticle);
-      return { data: articles };
+      if (articles.length === 0) {
+        return { data: FEATURED_ARTICLES, isFallback: true };
+      }
+
+      return { data: articles, isFallback: false };
     } catch (err: any) {
-      return { data: [], error: err?.message || 'Failed to list published articles.' };
+      return { data: FEATURED_ARTICLES, isFallback: true, error: err?.message || 'Failed to list published articles.' };
+    }
+  },
+
+  /**
+   * Seed Initial News Stories into Supabase Database
+   */
+  async seedInitialArticles(): Promise<{ success: boolean; count: number; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, count: 0, error: 'Supabase credentials are not configured.' };
+    }
+
+    try {
+      let seeded = 0;
+      for (const art of FEATURED_ARTICLES) {
+        const categoryId = await resolveCategoryId(art.category || 'politics');
+        const slug = (art.slug || art.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '-' + Math.floor(Math.random() * 1000);
+        const dbPayload: any = {
+          title: art.title,
+          slug,
+          summary: art.summary || art.content.substring(0, 180) + '...',
+          body: art.content,
+          status: 'published',
+          county: art.county || 'Nairobi',
+          featured_image_url: art.imageUrl,
+          is_featured: art.isFeatured ?? true,
+          is_breaking: art.isBreaking ?? false,
+          is_editor_choice: art.isEditorPick ?? false,
+          primary_category_id: categoryId || undefined,
+          published_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('articles').insert([dbPayload]);
+        if (!error) seeded++;
+      }
+
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
+      return { success: true, count: seeded };
+    } catch (err: any) {
+      return { success: false, count: 0, error: err?.message || 'Failed to seed articles into Supabase.' };
     }
   },
 
