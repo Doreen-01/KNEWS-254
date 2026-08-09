@@ -3,7 +3,7 @@ import { KmkLogo } from './KmkLogo';
 import { DoreenPhoto } from './DoreenPhoto';
 import { uploadMediaToSupabase, isSupabaseConfigured, supabase } from '../lib/supabase';
 import { articleService } from '../services/articleService';
-import { authService, UserProfile } from '../services/authService';
+import { authService, UserProfile, RolePermissions, getRolePermissions } from '../services/authService';
 import { AUTHORS_LIST } from '../data/newsData';
 import { NewsCategory, AssignmentTask, MediaItem, AdSlot, MembershipTier } from '../types';
 import {
@@ -286,36 +286,65 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     alert(`✓ [VETTING SUCCESS] ${cand.name} has been vetted & accredited by Executive Command! They can now log into the CMS using ${cand.email}.`);
   };
 
-  // Authenticated Supabase Session State
+  // Authenticated Supabase Session & Role Caching State
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
+  const [cachedUserRole, setCachedUserRole] = useState<string>(() => {
+    return localStorage.getItem('knews254_cached_role') || '';
+  });
+  const [userPermissions, setUserPermissions] = useState<RolePermissions | null>(() => {
+    const saved = localStorage.getItem('knews254_cached_role');
+    return saved ? getRolePermissions(saved) : null;
+  });
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
+  // Function that listens for auth state changes & retrieves role permissions from 'profiles' table
   useEffect(() => {
     let active = true;
-    async function restoreSession() {
+
+    async function initializeSession() {
       setIsLoadingAuth(true);
       const profile = await authService.getCurrentProfile();
       if (active) {
-        setCurrentUserProfile(profile);
+        if (profile) {
+          const perms = getRolePermissions(profile.role);
+          setCurrentUserProfile(profile);
+          setCachedUserRole(profile.role);
+          setUserPermissions(perms);
+          localStorage.setItem('knews254_cached_role', profile.role);
+        } else {
+          setCurrentUserProfile(null);
+          setCachedUserRole('');
+          setUserPermissions(null);
+          localStorage.removeItem('knews254_cached_role');
+        }
         setIsLoadingAuth(false);
       }
     }
-    restoreSession();
 
-    if (supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-          const profile = await authService.getCurrentProfile();
-          if (active) setCurrentUserProfile(profile);
-        } else if (event === 'SIGNED_OUT') {
-          if (active) setCurrentUserProfile(null);
-        }
-      });
-      return () => {
-        active = false;
+    initializeSession();
+
+    // Subscribe to auth state changes to automatically retrieve role-based permissions
+    const subscription = authService.subscribeToAuthChanges((profile, perms) => {
+      if (!active) return;
+      if (profile) {
+        setCurrentUserProfile(profile);
+        setCachedUserRole(profile.role);
+        setUserPermissions(perms);
+        localStorage.setItem('knews254_cached_role', profile.role);
+      } else {
+        setCurrentUserProfile(null);
+        setCachedUserRole('');
+        setUserPermissions(null);
+        localStorage.removeItem('knews254_cached_role');
+      }
+    });
+
+    return () => {
+      active = false;
+      if (subscription && typeof subscription.unsubscribe === 'function') {
         subscription.unsubscribe();
-      };
-    }
+      }
+    };
   }, []);
 
   // Map user profile to StaffUser representation for UI compatibility
@@ -334,6 +363,9 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
 
   const isAuthenticated = !!currentUser;
 
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [signupName, setSignupName] = useState('');
+  const [signupSuccessMsg, setSignupSuccessMsg] = useState('');
   const [loginEmail, setLoginEmail] = useState('kellymuthomi22@gmail.com');
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -341,23 +373,41 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isGoogleLoggingIn, setIsGoogleLoggingIn] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
+    setSignupSuccessMsg('');
     setIsLoggingIn(true);
 
     const emailTrim = loginEmail.trim().toLowerCase();
 
-    const res = await authService.login(emailTrim, loginPassword);
-    if (!res.success) {
-      setLoginError(res.error || 'Access Denied: Invalid credentials or password.');
+    if (authMode === 'signup') {
+      const res = await authService.signUp(emailTrim, loginPassword, signupName);
       setIsLoggingIn(false);
-      return;
-    }
 
-    const profile = await authService.getCurrentProfile();
-    setCurrentUserProfile(profile);
-    setIsLoggingIn(false);
+      if (!res.success) {
+        setLoginError(res.error || 'Registration failed.');
+        return;
+      }
+
+      if (res.requiresEmailConfirmation) {
+        setSignupSuccessMsg(res.error || 'Account created! Please check your email inbox to confirm your account before logging in.');
+      } else {
+        const profile = await authService.getCurrentProfile();
+        setCurrentUserProfile(profile);
+      }
+    } else {
+      const res = await authService.login(emailTrim, loginPassword);
+      if (!res.success) {
+        setLoginError(res.error || 'Access Denied: Invalid credentials or password.');
+        setIsLoggingIn(false);
+        return;
+      }
+
+      const profile = await authService.getCurrentProfile();
+      setCurrentUserProfile(profile);
+      setIsLoggingIn(false);
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -1131,13 +1181,67 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
             <div className="bg-red-950/90 border-2 border-red-600 text-red-200 p-4 rounded-2xl text-xs text-left font-semibold flex items-start gap-3 shadow-2xl animate-pulse">
               <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold text-white text-sm">Security Authentication Failure</p>
+                <p className="font-bold text-white text-sm">Security Authentication Notice</p>
                 <p className="mt-0.5">{loginError}</p>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4 text-left bg-slate-900/90 p-6 rounded-2xl border border-slate-800 shadow-xl">
+          {signupSuccessMsg && (
+            <div className="bg-emerald-950/90 border-2 border-emerald-500 text-emerald-200 p-4 rounded-2xl text-xs text-left font-semibold flex items-start gap-3 shadow-2xl">
+              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-white text-sm">Account Registration Successful</p>
+                <p className="mt-0.5">{signupSuccessMsg}</p>
+              </div>
+            </div>
+          )}
+
+          {/* AUTH MODE TOGGLE TABS */}
+          <div className="grid grid-cols-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 font-mono text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => { setAuthMode('login'); setLoginError(''); setSignupSuccessMsg(''); }}
+              className={`py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 ${
+                authMode === 'login'
+                  ? 'bg-red-700 text-white shadow-lg font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMode('signup'); setLoginError(''); setSignupSuccessMsg(''); }}
+              className={`py-2.5 rounded-xl transition cursor-pointer flex items-center justify-center gap-2 ${
+                authMode === 'signup'
+                  ? 'bg-amber-600 text-white shadow-lg font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Register Account</span>
+            </button>
+          </div>
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4 text-left bg-slate-900/90 p-6 rounded-2xl border border-slate-800 shadow-xl">
+            {authMode === 'signup' && (
+              <div>
+                <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5">
+                  Full Name / Journalistic Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={signupName}
+                  onChange={(e) => setSignupName(e.target.value)}
+                  placeholder="e.g. Kelly Muthomi Kinoti"
+                  className="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans transition"
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1.5">
                 Staff Email Address
@@ -1160,6 +1264,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  minLength={6}
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••••••••••"
@@ -1179,17 +1284,21 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
             <button
               type="submit"
               disabled={isLoggingIn || isGoogleLoggingIn}
-              className="w-full bg-gradient-to-r from-red-600 via-red-700 to-red-600 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-xs sm:text-sm py-3.5 px-6 rounded-xl shadow-xl border border-red-500/50 flex items-center justify-center gap-2 transition disabled:opacity-50 uppercase tracking-wider cursor-pointer"
+              className={`w-full font-extrabold text-xs sm:text-sm py-3.5 px-6 rounded-xl shadow-xl border text-white flex items-center justify-center gap-2 transition disabled:opacity-50 uppercase tracking-wider cursor-pointer ${
+                authMode === 'signup'
+                  ? 'bg-gradient-to-r from-amber-600 via-amber-700 to-amber-600 hover:from-amber-500 hover:to-amber-600 border-amber-500/50'
+                  : 'bg-gradient-to-r from-red-600 via-red-700 to-red-600 hover:from-red-500 hover:to-red-600 border-red-500/50'
+              }`}
             >
               {isLoggingIn ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  Verifying Coded Security Credentials...
+                  {authMode === 'signup' ? 'Creating Supabase User Account...' : 'Verifying Security Credentials...'}
                 </>
               ) : (
                 <>
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                  Authenticate & Unlock Command Center
+                  {authMode === 'signup' ? 'Register Account & Provision Access' : 'Authenticate & Unlock Command Center'}
                 </>
               )}
             </button>

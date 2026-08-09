@@ -31,6 +31,31 @@ export interface UserProfile {
   created_at?: string;
 }
 
+export interface RolePermissions {
+  canAccessCms: boolean;
+  canPublish: boolean;
+  canDelete: boolean;
+  canManageUsers: boolean;
+  canEditSettings: boolean;
+  clearanceLevel: string;
+}
+
+export function getRolePermissions(role: string): RolePermissions {
+  const normalized = (role || '').toLowerCase();
+  const isSuper = normalized.includes('super_admin') || normalized.includes('chairman') || normalized.includes('founder') || normalized.includes('chief_admin');
+  const isEditor = normalized.includes('editor') || normalized.includes('chief');
+  const isHR = normalized.includes('hr_manager') || normalized.includes('talent');
+  
+  return {
+    canAccessCms: true,
+    canPublish: isSuper || isEditor || normalized.includes('journalist') || normalized.includes('reporter') || normalized.includes('correspondent'),
+    canDelete: isSuper || normalized.includes('editor_in_chief') || normalized.includes('managing_editor'),
+    canManageUsers: isSuper || isHR,
+    canEditSettings: isSuper,
+    clearanceLevel: isSuper ? 'LEVEL 4 SUPREME' : isEditor ? 'LEVEL 3 EXECUTIVE' : 'LEVEL 2 STAFF'
+  };
+}
+
 export const authService = {
   /**
    * Get current authenticated user profile strictly from Supabase Auth + public.profiles
@@ -193,6 +218,12 @@ export const authService = {
       });
 
       if (error) {
+        if (error.message.toLowerCase().includes('invalid login credentials')) {
+          return {
+            success: false,
+            error: 'Invalid login credentials. If this email is not registered yet, use the "Create Staff Account / Sign Up" option below to create your account or verify your user in Supabase Authentication.'
+          };
+        }
         return { success: false, error: error.message };
       }
 
@@ -210,6 +241,51 @@ export const authService = {
       return { success: false, error: 'Authentication failed. Please check credentials.' };
     } catch (err: any) {
       return { success: false, error: err?.message || 'Authentication error encountered.' };
+    }
+  },
+
+  /**
+   * Register a new user using Supabase Authentication (signUp)
+   */
+  async signUp(email: string, pass: string, name?: string): Promise<{ success: boolean; profile?: UserProfile; error?: string; requiresEmailConfirmation?: boolean }> {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!isSupabaseConfigured() || !supabase) {
+      return { 
+        success: false, 
+        error: 'Supabase credentials are missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.' 
+      };
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password: pass,
+        options: {
+          data: {
+            full_name: name || cleanEmail.split('@')[0]
+          }
+        }
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data.session) {
+        const profile = await this.getCurrentProfile();
+        return { success: true, profile };
+      } else if (data.user) {
+        return { 
+          success: true, 
+          requiresEmailConfirmation: true,
+          error: 'Account created in Supabase! If "Confirm email" is enabled in your Supabase project, please check your inbox to confirm before logging in. (Or turn off "Confirm email" in Supabase Authentication settings to allow instant sign-in).'
+        };
+      }
+
+      return { success: false, error: 'Registration failed. Please try again.' };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Error creating account.' };
     }
   },
 
@@ -250,6 +326,34 @@ export const authService = {
         console.error('Signout error:', e);
       }
     }
+  },
+
+  /**
+   * Listens for authentication state changes and automatically retrieves 
+   * the user's role-based permissions from the 'profiles' table after a successful sign-in,
+   * providing the profile and role permissions to the callback.
+   */
+  subscribeToAuthChanges(callback: (profile: UserProfile | null, permissions: RolePermissions | null) => void) {
+    if (!isSupabaseConfigured() || !supabase) {
+      callback(null, null);
+      return { unsubscribe: () => {} };
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION')) {
+        const profile = await authService.getCurrentProfile();
+        if (profile) {
+          const permissions = getRolePermissions(profile.role);
+          callback(profile, permissions);
+        } else {
+          callback(null, null);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        callback(null, null);
+      }
+    });
+
+    return subscription;
   }
 };
 
