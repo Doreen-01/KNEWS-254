@@ -58,7 +58,10 @@ import {
   Vote,
   Building,
   Headphones,
-  BookOpen
+  BookOpen,
+  Edit3,
+  Trash2,
+  PenTool
 } from 'lucide-react';
 
 interface StaffUser {
@@ -75,12 +78,16 @@ interface StaffUser {
 }
 
 interface AdminCmsPortalProps {
+  initialTab?: string;
+  initialShowDraftModal?: boolean;
   onNavigateCategory?: (category: NewsCategory) => void;
   onNavigateTab?: (tab: 'platform' | 'prd') => void;
   onClose?: () => void;
 }
 
 export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
+  initialTab,
+  initialShowDraftModal,
   onNavigateCategory,
   onNavigateTab,
   onClose
@@ -110,7 +117,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
       id: 'staff-001',
       name: 'Kelly Muthomi Kinoti',
       email: 'kellymuthomi22@gmail.com',
-      role: 'Chief Administrator & Chairman',
+      role: 'Super Administrator (Chairman)',
       department: 'Executive Governance & Engineering',
       clearanceLevel: 'LEVEL 4 SUPREME',
       isChiefAdmin: true,
@@ -118,64 +125,64 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     },
     {
       id: 'staff-002',
-      name: 'Doreen Ngugi Nkonge',
-      email: 'doreenngugi38@gmail.com',
-      role: 'Customer Support Officer',
-      department: 'Reader Relations & Public Service',
-      clearanceLevel: 'LEVEL 2 SUPPORT',
-      isChiefAdmin: false,
-      isCustomPhoto: true,
-      lastLogin: '2 mins ago'
-    },
-    {
-      id: 'staff-003',
       name: 'Muchui Mwirigi',
       email: 'muchuidk@gmail.com',
-      role: 'Editor-in-Chief & Community Moderator',
-      department: 'Executive Editorial & Community Governance Desk',
-      clearanceLevel: 'LEVEL 3 CHIEF EDITOR & MODERATOR',
+      role: 'Managing Editor & Multimedia Producer',
+      department: 'Editorial Board & Multimedia Desk',
+      clearanceLevel: 'LEVEL 3 MANAGING EDITOR',
       isChiefAdmin: false,
       lastLogin: 'Just Now'
     },
     {
-      id: 'staff-007',
+      id: 'staff-003',
       name: 'Alfred Mwenda',
       email: 'alfredmwenda684@gmail.com',
-      role: 'Managing Editor & Senior Fact Checker (Verification Lead)',
-      department: 'Managing Editorial & Fact Check Verification Desk',
-      clearanceLevel: 'LEVEL 3 MANAGING EDITOR & VERIFICATION',
+      role: 'Editor-in-Chief',
+      department: 'Newsroom Operations & Investigative Beats',
+      clearanceLevel: 'LEVEL 3 CHIEF EDITOR',
       isChiefAdmin: false,
       lastLogin: '10 mins ago'
     },
     {
-      id: 'staff-008',
-      name: 'Linah Kawira',
-      email: 'linahkawira14@gmail.com',
-      role: 'Legal Reviewer & Compliance Officer',
-      department: 'Legal & Regulatory Compliance Desk',
-      clearanceLevel: 'LEVEL 3 LEGAL',
+      id: 'staff-004',
+      name: 'Doreen Ngugi Nkonge',
+      email: 'doreenngugi38@gmail.com',
+      role: 'Fact Checker & Verification Specialist',
+      department: 'Fact Check Desk & Disinformation Audit',
+      clearanceLevel: 'LEVEL 3 FACT CHECKER',
       isChiefAdmin: false,
-      lastLogin: '15 mins ago'
+      isCustomPhoto: true,
+      lastLogin: 'Active Session'
     },
     {
-      id: 'staff-009',
-      name: 'Joy Mwiti',
-      email: 'joy.mwiti@knews254.co.ke',
-      role: 'Human Resource Manager & Talent Director',
-      department: 'HR & Personnel Operations Desk',
-      clearanceLevel: 'LEVEL 3 HR MANAGEMENT',
+      id: 'staff-005',
+      name: 'Winjoy Mwiti',
+      email: 'winjoymwiti@gmail.com',
+      role: 'Human Resources Manager',
+      department: 'HR & Staff Accreditation',
+      clearanceLevel: 'LEVEL 3 HR MANAGER',
       isChiefAdmin: false,
       lastLogin: '1 hr ago'
     },
     {
-      id: 'staff-010',
-      name: 'Scholastica Karwitha',
+      id: 'staff-006',
+      name: 'Scolastica Karwitha',
       email: 'scholasticakarwitha@gmail.com',
-      role: 'Advertising Manager & Chief Reporter / Chief Journalist',
-      department: 'Advertising & Newsroom Bureau Operations (Leads All Reporters)',
-      clearanceLevel: 'LEVEL 3 CHIEF REPORTER & ADVERTISING',
+      role: 'Advertising Manager & Chief Reporter',
+      department: 'Commercial Monetization & News Bureau',
+      clearanceLevel: 'LEVEL 3 ADVERTISING',
       isChiefAdmin: false,
       lastLogin: '5 mins ago'
+    },
+    {
+      id: 'staff-007',
+      name: 'Linah Kawira',
+      email: 'linahkawira14@gmail.com',
+      role: 'Legal Reviewer, Moderator & Support Officer',
+      department: 'Legal Compliance, Moderation & Support Desk',
+      clearanceLevel: 'LEVEL 3 LEGAL & COMPLIANCE',
+      isChiefAdmin: false,
+      lastLogin: '15 mins ago'
     }
   ];
 
@@ -355,7 +362,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     role: currentUserProfile.role,
     department: currentUserProfile.department || 'Newsroom Operations',
     clearanceLevel: currentUserProfile.role === 'super_admin' ? 'LEVEL 4 SUPREME' : 'LEVEL 3 AUTHENTICATED',
-    isChiefAdmin: currentUserProfile.role === 'super_admin' || currentUserProfile.email.toLowerCase().includes('kellymuthomi'),
+    isChiefAdmin: currentUserProfile.role === 'super_admin' || currentUserProfile.email.toLowerCase().includes('kellymuthomi') || currentUserProfile.email.toLowerCase().includes('knews254ke'),
     isCustomPhoto: !!currentUserProfile.profile_image,
     avatar: currentUserProfile.profile_image,
     lastLogin: 'Active Session'
@@ -391,7 +398,9 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
       }
 
       if (res.requiresEmailConfirmation) {
-        setSignupSuccessMsg(res.error || 'Account created! Please check your email inbox to confirm your account before logging in.');
+        setSignupSuccessMsg(`✉️ Verification email sent to ${emailTrim}! Please check your inbox (and spam folder) to click "Confirm Email". After verifying, you can sign in below.`);
+        setAuthMode('login');
+        setSignupName('');
       } else {
         const profile = await authService.getCurrentProfile();
         setCurrentUserProfile(profile);
@@ -448,7 +457,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     | 'hr'
     | 'support'
     | 'reviews' | 'corrections' | 'chat_rota' | 'audit_logs' | 'infrastructure'
-  >('overview');
+  >(((initialTab as any) || 'overview'));
 
   /* -------------------------------------------------------------------------- */
   /* ASSIGNMENT DESK & NEWSROOM WORKLOAD MATRIX                                */
@@ -915,7 +924,8 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
   const [isLoadingCmsArticles, setIsLoadingCmsArticles] = useState(false);
   const [cmsArticlesError, setCmsArticlesError] = useState<string | null>(null);
 
-  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [showDraftModal, setShowDraftModal] = useState(!!initialShowDraftModal);
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
   const [isSubmittingDraft, setIsSubmittingDraft] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
 
@@ -934,6 +944,15 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     targetStatus: 'published'
   });
 
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab as any);
+    }
+    if (initialShowDraftModal) {
+      setShowDraftModal(true);
+    }
+  }, [initialTab, initialShowDraftModal]);
+
   const loadArticles = async () => {
     setIsLoadingCmsArticles(true);
     setCmsArticlesError(null);
@@ -943,11 +962,20 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
         setCmsArticlesError(result.error);
         setArticlesList([]);
       } else {
-        setArticlesList((result.data || []).map(a => ({
+        setArticlesList((result.data || []).map((a: any) => ({
           id: a.id,
           title: a.title,
-          author: a.author.name,
+          summary: a.summary || '',
+          content: a.content || a.body || '',
           category: a.category,
+          categoryName: a.categoryName || a.category,
+          county: a.county || 'Nairobi',
+          author: a.author?.name || 'Kelly Muthomi Kinoti',
+          imageUrl: a.imageUrl || a.featured_image_url || '',
+          imageCaption: a.imageCaption || '',
+          imageCredit: a.imageCredit || '',
+          isBreaking: a.isBreaking,
+          isFeatured: a.isFeatured,
           status: a.dbStatus === 'published' ? 'Published' :
                   a.dbStatus === 'submitted' ? 'Submitted' :
                   a.dbStatus === 'approved' ? 'Approved' :
@@ -955,8 +983,8 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
           dbStatus: a.dbStatus,
           priority: a.isBreaking ? 'Breaking News' : a.isFeatured ? 'High Priority' : 'Normal',
           date: a.publishedAt || 'Draft',
-          reads: `${a.viewCount}`,
-          wordCount: a.content ? a.content.split(' ').length : 0
+          reads: `${a.viewCount || 0}`,
+          wordCount: (a.content || a.body || '').split(' ').filter(Boolean).length
         })));
       }
     } catch (err: any) {
@@ -969,6 +997,59 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
   useEffect(() => {
     loadArticles();
   }, []);
+
+  const handleOpenCreateModal = (defaultCategory?: string) => {
+    setEditingArticleId(null);
+    setNewDraft({
+      title: '',
+      category: defaultCategory || 'Politics',
+      county: 'Nairobi',
+      author: currentUserProfile?.name || 'Kelly Muthomi Kinoti',
+      summary: '',
+      content: '',
+      priority: 'Normal',
+      imagePreview: '',
+      fileName: '',
+      imageCaption: '',
+      imageCredit: '',
+      targetStatus: 'published'
+    });
+    setDraftError(null);
+    setActiveTab('editorial');
+    setShowDraftModal(true);
+  };
+
+  const handleOpenEditModal = (art: any) => {
+    setEditingArticleId(art.id);
+    setNewDraft({
+      title: art.title || '',
+      category: art.categoryName || art.category || 'Politics',
+      county: art.county || 'Nairobi',
+      author: art.author || currentUserProfile?.name || 'Kelly Muthomi Kinoti',
+      summary: art.summary || '',
+      content: art.content || art.body || '',
+      priority: art.priority || (art.isBreaking ? 'Breaking News' : art.isFeatured ? 'High Priority' : 'Normal'),
+      imagePreview: art.imageUrl || '',
+      fileName: art.fileName || '',
+      imageCaption: art.imageCaption || '',
+      imageCredit: art.imageCredit || '',
+      targetStatus: art.dbStatus || (art.status === 'Published' ? 'published' : 'submitted')
+    });
+    setDraftError(null);
+    setActiveTab('editorial');
+    setShowDraftModal(true);
+  };
+
+  const handleDeleteArticle = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this article?')) return;
+    const res = await articleService.softDeleteArticle(id);
+    if (res.success) {
+      await loadArticles();
+      window.dispatchEvent(new Event('knews254_articles_updated'));
+    } else {
+      alert(res.error || 'Failed to delete article.');
+    }
+  };
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -996,32 +1077,55 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     setIsSubmittingDraft(true);
     setDraftError(null);
 
-    const authorName = currentUser?.name || newDraft.author || 'Kelly Muthomi Kinoti';
     const catSlug = CATEGORY_SLUG_MAP[newDraft.category] || newDraft.category.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    const createResult = await articleService.createArticle({
-      title: newDraft.title.trim(),
-      summary: newDraft.summary.trim() || newDraft.content.substring(0, 180) + '...',
-      body: newDraft.content.trim(),
-      category: catSlug || 'politics',
-      county: newDraft.county || 'Nairobi',
-      imageUrl: newDraft.imagePreview || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
-      imageCaption: newDraft.imageCaption,
-      imageCredit: newDraft.imageCredit,
-      isBreaking: newDraft.priority === 'Breaking News',
-      isFeatured: newDraft.priority === 'High Priority',
-      authorId: currentUser?.id,
-      status: (newDraft.targetStatus || 'published') as any
-    });
+    if (editingArticleId) {
+      const updateResult = await articleService.updateArticle(editingArticleId, {
+        title: newDraft.title.trim(),
+        summary: newDraft.summary.trim() || newDraft.content.substring(0, 180) + '...',
+        body: newDraft.content.trim(),
+        category: catSlug || 'politics',
+        county: newDraft.county || 'Nairobi',
+        imageUrl: newDraft.imagePreview,
+        imageCaption: newDraft.imageCaption,
+        imageCredit: newDraft.imageCredit,
+        isBreaking: newDraft.priority === 'Breaking News',
+        isFeatured: newDraft.priority === 'High Priority',
+        status: (newDraft.targetStatus || 'published') as any
+      });
 
-    setIsSubmittingDraft(false);
+      setIsSubmittingDraft(false);
 
-    if (!createResult.success) {
-      setDraftError(createResult.error || 'Failed to save article in Supabase.');
-      return;
+      if (!updateResult.success) {
+        setDraftError(updateResult.error || 'Failed to update article in Supabase.');
+        return;
+      }
+    } else {
+      const createResult = await articleService.createArticle({
+        title: newDraft.title.trim(),
+        summary: newDraft.summary.trim() || newDraft.content.substring(0, 180) + '...',
+        body: newDraft.content.trim(),
+        category: catSlug || 'politics',
+        county: newDraft.county || 'Nairobi',
+        imageUrl: newDraft.imagePreview || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
+        imageCaption: newDraft.imageCaption,
+        imageCredit: newDraft.imageCredit,
+        isBreaking: newDraft.priority === 'Breaking News',
+        isFeatured: newDraft.priority === 'High Priority',
+        authorId: currentUser?.id,
+        status: (newDraft.targetStatus || 'published') as any
+      });
+
+      setIsSubmittingDraft(false);
+
+      if (!createResult.success) {
+        setDraftError(createResult.error || 'Failed to save article in Supabase.');
+        return;
+      }
     }
 
     setShowDraftModal(false);
+    setEditingArticleId(null);
     setNewDraft({
       title: '',
       category: 'Politics',
@@ -1540,7 +1644,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
         {/* Action Controls & Staff Role Switcher */}
         <div className="flex flex-wrap items-center gap-3 shrink-0">
           <button
-            onClick={() => setShowDraftModal(true)}
+            onClick={() => handleOpenCreateModal()}
             className="bg-gradient-to-r from-red-600 via-amber-600 to-red-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-red-500/40 flex items-center gap-2 font-mono uppercase tracking-wider cursor-pointer hover:scale-105 transition-all"
           >
             <PlusCircle className="w-4 h-4 text-white animate-pulse" />
@@ -1686,7 +1790,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
 
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
-              onClick={() => setShowDraftModal(true)}
+              onClick={() => handleOpenCreateModal()}
               className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-lg flex items-center gap-2 cursor-pointer transition"
             >
               <PlusCircle className="w-4 h-4 text-white" />
@@ -1695,10 +1799,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
 
             {currentRole === 'Podcast Host & Audio Producer' && (
               <button
-                onClick={() => {
-                  setNewDraft(prev => ({ ...prev, category: 'Audio & Podcasts' }));
-                  setShowDraftModal(true);
-                }}
+                onClick={() => handleOpenCreateModal('Audio & Podcasts')}
                 className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-2xl transition flex items-center gap-1.5 shadow cursor-pointer"
               >
                 <Headphones className="w-4 h-4" />
@@ -1708,10 +1809,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
 
             {currentRole === 'Fact Checker' && (
               <button
-                onClick={() => {
-                  setNewDraft(prev => ({ ...prev, category: 'Fact Check' }));
-                  setShowDraftModal(true);
-                }}
+                onClick={() => handleOpenCreateModal('Fact Check')}
                 className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-2xl transition flex items-center gap-1.5 shadow cursor-pointer"
               >
                 <Shield className="w-4 h-4" />
@@ -2125,7 +2223,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
 
             <div className="flex flex-wrap items-center gap-2.5">
               <button
-                onClick={() => setShowDraftModal(true)}
+                onClick={() => handleOpenCreateModal()}
                 className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-lg cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
@@ -2354,8 +2452,8 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
               <p className="text-xs text-slate-400">Review journalist submissions, approve legal clearances, and assign homepage lead slots.</p>
             </div>
             <button
-              onClick={() => setShowDraftModal(true)}
-              className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-lg"
+              onClick={() => handleOpenCreateModal()}
+              className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-lg cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Draft New Article
             </button>
@@ -2374,7 +2472,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                   <p className="text-slate-400 text-xs">Reporter: <strong className="text-slate-200">{art.author}</strong></p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                   <span className={`font-mono font-bold px-3 py-1 rounded-xl text-[11px] border ${
                     art.status === 'Published' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' :
                     art.status === 'Fact-Check Approved' ? 'bg-blue-950 text-blue-400 border-blue-800' :
@@ -2383,14 +2481,31 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                     {art.status}
                   </span>
 
+                  <button
+                    onClick={() => handleOpenEditModal(art)}
+                    className="bg-amber-600 hover:bg-amber-500 text-slate-950 font-extrabold px-3 py-1.5 rounded-xl transition text-xs shadow flex items-center gap-1.5 cursor-pointer"
+                    title="Edit article headline, category, body content, and cover photo"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    Edit Article
+                  </button>
+
                   {art.status !== 'Published' && (
                     <button
                       onClick={() => handleUpdateArticleStatus(art.id, 'Published')}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 rounded-xl transition text-xs shadow"
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 rounded-xl transition text-xs shadow cursor-pointer"
                     >
                       Publish Now
                     </button>
                   )}
+
+                  <button
+                    onClick={() => handleDeleteArticle(art.id)}
+                    className="bg-red-950 hover:bg-red-900 text-red-400 border border-red-800 font-bold px-2.5 py-1.5 rounded-xl transition text-xs flex items-center gap-1 cursor-pointer"
+                    title="Delete dispatch"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -2411,7 +2526,9 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                     <FileText className="w-3.5 h-3.5 text-red-500" />
                     Knews254 Article & News Dispatch Studio
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-black text-white font-serif">Compose & Publish News Dispatch</h3>
+                  <h3 className="text-xl sm:text-2xl font-black text-white font-serif">
+                    {editingArticleId ? 'Edit Article & News Dispatch' : 'Compose & Publish News Dispatch'}
+                  </h3>
                 </div>
 
                 {draftError && (
@@ -2595,7 +2712,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                     ) : (
                       <>
                         <Send className="w-4 h-4 text-white" />
-                        <span>{newDraft.targetStatus === 'published' ? 'Publish Story Directly to Live Site' : 'Submit Story to Editorial Pipeline'}</span>
+                        <span>{editingArticleId ? 'Save & Update Article' : newDraft.targetStatus === 'published' ? 'Publish Story Directly to Live Site' : 'Submit Story to Editorial Pipeline'}</span>
                       </>
                     )}
                   </button>

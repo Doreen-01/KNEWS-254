@@ -30,7 +30,15 @@ export default function App() {
   const [selectedArticleDetail, setSelectedArticleDetail] = useState<Article | null>(null);
   const [language, setLanguage] = useState<'en' | 'sw' | 'sheng'>('en');
   const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [adminInitialTab, setAdminInitialTab] = useState<string>('overview');
+  const [adminInitialOpenDraft, setAdminInitialOpenDraft] = useState<boolean>(false);
   const [isFallbackArticles, setIsFallbackArticles] = useState(false);
+
+  const handleOpenCms = (tab: string = 'overview', openDraft: boolean = false) => {
+    setAdminInitialTab(tab);
+    setAdminInitialOpenDraft(openDraft);
+    setShowAdminPortal(true);
+  };
   const [isSeeding, setIsSeeding] = useState(false);
 
   // Sync Published Articles from Supabase
@@ -214,7 +222,7 @@ export default function App() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onOpenAiAssistant={() => setIsAiAssistantOpen(true)}
-        onOpenCms={() => setShowAdminPortal(true)}
+        onOpenCms={handleOpenCms}
         language={language}
         setLanguage={setLanguage}
       />
@@ -233,6 +241,8 @@ export default function App() {
               </button>
             </div>
             <AdminCmsPortal
+              initialTab={adminInitialTab}
+              initialShowDraftModal={adminInitialOpenDraft}
               onClose={() => setShowAdminPortal(false)}
               onNavigateCategory={(cat) => {
                 handleSelectCategory(cat);
@@ -507,7 +517,7 @@ export default function App() {
           setActiveTab(tab);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onOpenCms={() => setShowAdminPortal(true)}
+        onOpenCms={() => handleOpenCms('overview', false)}
         onOpenAi={() => setIsAiAssistantOpen(true)}
       />
 

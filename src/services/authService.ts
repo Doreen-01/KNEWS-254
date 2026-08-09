@@ -40,19 +40,33 @@ export interface RolePermissions {
   clearanceLevel: string;
 }
 
+export function getDefaultRoleForEmail(email: string): UserRole {
+  const e = (email || '').toLowerCase().trim();
+  if (e.includes('kellymuthomi') || e.includes('knews254ke')) return 'super_admin';
+  if (e.includes('muchui')) return 'managing_editor';
+  if (e.includes('alfred') || e.includes('mwenda')) return 'editor_in_chief';
+  if (e.includes('doreen')) return 'fact_checker';
+  if (e.includes('winjoy') || e.includes('mwiti')) return 'hr_manager';
+  if (e.includes('scholastica') || e.includes('scolastica')) return 'advertising_manager';
+  if (e.includes('linah') || e.includes('kawira')) return 'legal_reviewer';
+  return 'journalist';
+}
+
 export function getRolePermissions(role: string): RolePermissions {
   const normalized = (role || '').toLowerCase();
   const isSuper = normalized.includes('super_admin') || normalized.includes('chairman') || normalized.includes('founder') || normalized.includes('chief_admin');
-  const isEditor = normalized.includes('editor') || normalized.includes('chief');
+  const isManagingEditor = normalized.includes('managing_editor');
+  const isChief = normalized.includes('editor_in_chief') || normalized.includes('chief');
+  const isEditor = isManagingEditor || isChief || normalized.includes('editor');
   const isHR = normalized.includes('hr_manager') || normalized.includes('talent');
   
   return {
     canAccessCms: true,
-    canPublish: isSuper || isEditor || normalized.includes('journalist') || normalized.includes('reporter') || normalized.includes('correspondent'),
-    canDelete: isSuper || normalized.includes('editor_in_chief') || normalized.includes('managing_editor'),
+    canPublish: isSuper || isEditor || normalized.includes('journalist') || normalized.includes('reporter') || normalized.includes('correspondent') || normalized.includes('fact_checker') || normalized.includes('advertising'),
+    canDelete: isSuper || isManagingEditor || isChief,
     canManageUsers: isSuper || isHR,
     canEditSettings: isSuper,
-    clearanceLevel: isSuper ? 'LEVEL 4 SUPREME' : isEditor ? 'LEVEL 3 EXECUTIVE' : 'LEVEL 2 STAFF'
+    clearanceLevel: isSuper ? 'LEVEL 4 SUPREME' : isManagingEditor ? 'LEVEL 3 MANAGING EDITOR' : isChief ? 'LEVEL 3 CHIEF EDITOR' : isHR ? 'LEVEL 3 HR MANAGER' : 'LEVEL 2 STAFF'
   };
 }
 
@@ -104,17 +118,18 @@ export const authService = {
       // 3. If still no profile in database, auto-provision for authenticated user
       if (!profile && userEmail) {
         try {
+          const autoRole = getDefaultRoleForEmail(userEmail);
           const { data: createdProfile } = await supabase
             .from('profiles')
             .insert([{
               auth_user_id: userId,
               name: userName,
               email: userEmail,
-              role: 'journalist',
+              role: autoRole,
               status: 'ACTIVE',
               profile_image: userAvatar,
               department: 'Newsroom Operations',
-              biography: 'Authenticated via Google OAuth'
+              biography: 'Authenticated Knews254 Staff Member'
             }])
             .select('*')
             .maybeSingle();
@@ -133,7 +148,7 @@ export const authService = {
           auth_user_id: userId,
           name: profile.name || userName,
           email: profile.email || userEmail,
-          role: profile.role as UserRole,
+          role: (profile.role || getDefaultRoleForEmail(userEmail)) as UserRole,
           status: profile.status || 'ACTIVE',
           profile_image: profile.profile_image || userAvatar,
           department: profile.department || 'Newsroom Operations',
@@ -142,16 +157,17 @@ export const authService = {
       }
 
       // 4. Session profile for authenticated OAuth user
+      const defaultRole = getDefaultRoleForEmail(userEmail);
       return {
         id: userId,
         auth_user_id: userId,
         name: userName,
         email: userEmail,
-        role: 'journalist',
+        role: defaultRole,
         status: 'ACTIVE',
         profile_image: userAvatar,
         department: 'Newsroom Operations',
-        biography: 'Authenticated via Google OAuth'
+        biography: 'Authenticated Knews254 Staff Member'
       };
     } catch (err) {
       console.error('Supabase auth session error:', err);
@@ -262,6 +278,7 @@ export const authService = {
         email: cleanEmail,
         password: pass,
         options: {
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
           data: {
             full_name: name || cleanEmail.split('@')[0]
           }

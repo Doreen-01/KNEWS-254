@@ -43,7 +43,7 @@ interface HeaderProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onOpenAiAssistant: () => void;
-  onOpenCms: () => void;
+  onOpenCms: (tab?: string, openDraft?: boolean) => void;
   language: 'en' | 'sw' | 'sheng';
   setLanguage: (lang: 'en' | 'sw' | 'sheng') => void;
 }
@@ -455,7 +455,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Post Article / Dispatch Button */}
           <button
-            onClick={onOpenCms}
+            onClick={() => onOpenCms('editorial', true)}
             className="hidden md:flex bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition items-center gap-1.5 shadow-md border border-red-400/40 cursor-pointer"
             title="Post an article or news dispatch directly to Knews254"
           >
@@ -465,7 +465,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* CMS Admin Portal */}
           <button
-            onClick={onOpenCms}
+            onClick={() => onOpenCms('overview', false)}
             className="hidden sm:flex bg-slate-900 hover:bg-slate-800 text-red-400 hover:text-red-300 border border-red-500/30 px-3 py-2 rounded-xl text-xs font-bold transition items-center gap-1.5 shadow-sm cursor-pointer"
             title="Open Editorial CMS & Infrastructure Portal"
           >
@@ -633,7 +633,17 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
             <button
               onClick={() => {
-                onOpenCms();
+                onOpenCms('editorial', true);
+                setIsMobileMenuOpen(false);
+              }}
+              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-red-600 to-amber-600 text-white font-extrabold p-2 rounded-xl"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>Post News</span>
+            </button>
+            <button
+              onClick={() => {
+                onOpenCms('overview', false);
                 setIsMobileMenuOpen(false);
               }}
               className="flex items-center justify-center gap-1.5 bg-slate-900 text-red-400 border border-red-500/30 font-bold p-2 rounded-xl"
