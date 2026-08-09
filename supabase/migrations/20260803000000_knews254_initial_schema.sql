@@ -1,8 +1,8 @@
 -- ====================================================================
--- KNEWS254 DIGITAL MEDIA NETWORK - SUPABASE DATABASE MIGRATION
+-- KNEWS254 DIGITAL MEDIA NETWORK - SUPABASE PRODUCTION DATABASE SCHEMA
 -- Migration Version: 20260803000000_knews254_initial_schema.sql
--- Description: Creates core schema tables, relationships, indexes, RLS 
---              policies, triggers, and seed data for Knews254 news platform.
+-- Description: Complete production schema tables, indexes, RLS policies,
+--              triggers, storage buckets, and seed data for Knews254.
 -- ====================================================================
 
 -- 1. EXTENSIONS
@@ -15,6 +15,7 @@ DO $$ BEGIN
         'super_admin',
         'managing_editor',
         'editor',
+        'editor_in_chief',
         'journalist',
         'correspondent',
         'fact_checker',
@@ -22,6 +23,10 @@ DO $$ BEGIN
         'social_media_manager',
         'hr_manager',
         'support_officer',
+        'legal_reviewer',
+        'community_moderator',
+        'advertising_manager',
+        'customer_support',
         'analyst'
     );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -111,6 +116,19 @@ CREATE TABLE IF NOT EXISTS public.articles (
     deleted_at TIMESTAMPTZ
 );
 
+-- Ensure columns exist if articles table was pre-existing
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS is_editor_choice BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS is_breaking BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS county VARCHAR(100) DEFAULT 'Nairobi';
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'normal';
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS language VARCHAR(20) DEFAULT 'en';
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+ALTER TABLE public.articles ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+
 -- 7. ARTICLE REVISIONS TABLE
 CREATE TABLE IF NOT EXISTS public.article_revisions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -164,24 +182,49 @@ CREATE TABLE IF NOT EXISTS public.article_media (
     PRIMARY KEY (article_id, media_id)
 );
 
--- 12. HOMEPAGE SECTIONS TABLE
-CREATE TABLE IF NOT EXISTS public.homepage_sections (
+-- 12. ASSIGNMENTS TABLE
+CREATE TABLE IF NOT EXISTS public.assignments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    section_name VARCHAR(100) NOT NULL UNIQUE,
-    article_ids UUID[],
+    title VARCHAR(255) NOT NULL,
+    brief_description TEXT,
+    category VARCHAR(100) DEFAULT 'politics',
+    assigned_to_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    assigned_by_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    county VARCHAR(100) DEFAULT 'Nairobi',
+    deadline TIMESTAMPTZ,
+    priority VARCHAR(50) DEFAULT 'HIGH',
+    status VARCHAR(50) DEFAULT 'ASSIGNED',
+    target_word_count INT DEFAULT 800,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 13. BREAKING NEWS TABLE
-CREATE TABLE IF NOT EXISTS public.breaking_news (
+-- 13. AD SLOTS TABLE
+CREATE TABLE IF NOT EXISTS public.ad_slots (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    article_id UUID REFERENCES public.articles(id) ON DELETE CASCADE,
-    custom_headline TEXT,
-    expires_at TIMESTAMPTZ,
+    slot_name VARCHAR(150) NOT NULL,
+    placement VARCHAR(100) NOT NULL,
+    advertiser_name VARCHAR(255) NOT NULL,
+    cpm_rate_kes NUMERIC(12,2) DEFAULT 0,
+    impressions_count INT DEFAULT 0,
+    clicks_count INT DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'active',
+    start_date TIMESTAMPTZ DEFAULT NOW(),
+    end_date TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 14. COMMENTS TABLE
+-- 14. MEMBERSHIP TIERS TABLE
+CREATE TABLE IF NOT EXISTS public.membership_tiers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(150) NOT NULL,
+    price_kes_per_month NUMERIC(12,2) DEFAULT 0,
+    features JSONB,
+    active_subscribers INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. COMMENTS TABLE
 CREATE TABLE IF NOT EXISTS public.comments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     article_id UUID NOT NULL REFERENCES public.articles(id) ON DELETE CASCADE,
@@ -192,7 +235,7 @@ CREATE TABLE IF NOT EXISTS public.comments (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 15. ARTICLE VIEWS TABLE
+-- 16. ARTICLE VIEWS TABLE
 CREATE TABLE IF NOT EXISTS public.article_views (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     article_id UUID REFERENCES public.articles(id) ON DELETE CASCADE,
@@ -201,18 +244,7 @@ CREATE TABLE IF NOT EXISTS public.article_views (
     ip_address VARCHAR(100)
 );
 
--- 16. AUDIT LOGS TABLE
-CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    action VARCHAR(100) NOT NULL,
-    record_type VARCHAR(100) NOT NULL,
-    record_id VARCHAR(255),
-    metadata JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 17. PERSISTENT CONTACT MESSAGES TABLE
+-- 17. CONTACT MESSAGES TABLE
 CREATE TABLE IF NOT EXISTS public.contact_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
@@ -270,7 +302,6 @@ CREATE INDEX IF NOT EXISTS idx_articles_primary_category_id ON public.articles(p
 CREATE INDEX IF NOT EXISTS idx_articles_county ON public.articles(county);
 CREATE INDEX IF NOT EXISTS idx_articles_is_featured ON public.articles(is_featured);
 CREATE INDEX IF NOT EXISTS idx_articles_is_breaking ON public.articles(is_breaking);
-CREATE INDEX IF NOT EXISTS idx_articles_is_editor_choice ON public.articles(is_editor_choice);
 CREATE INDEX IF NOT EXISTS idx_articles_deleted_at ON public.articles(deleted_at);
 
 -- ====================================================================
@@ -297,46 +328,97 @@ CREATE TRIGGER trigger_profiles_updated_at
     EXECUTE FUNCTION set_updated_at();
 
 -- ====================================================================
+-- STORAGE BUCKET CONFIGURATION
+-- ====================================================================
+INSERT INTO storage.buckets (id, name, public) 
+VALUES 
+  ('article-media', 'article-media', true),
+  ('media', 'media', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- ====================================================================
 -- ROW-LEVEL SECURITY (RLS) POLICIES
 -- ====================================================================
 ALTER TABLE public.articles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.media ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tipoffs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vetting_requests ENABLE ROW LEVEL SECURITY;
 
--- Articles: Anyone can read published articles
-CREATE POLICY "Public Read Published Articles" ON public.articles
-    FOR SELECT USING (status = 'published' AND deleted_at IS NULL);
+-- Articles Policies
+DROP POLICY IF EXISTS "Public Read Articles" ON public.articles;
+CREATE POLICY "Public Read Articles" ON public.articles
+    FOR SELECT USING (deleted_at IS NULL);
 
--- Articles: Staff can read all articles
-CREATE POLICY "Staff Read All Articles" ON public.articles
-    FOR ALL USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "Allow All Operations on Articles" ON public.articles;
+CREATE POLICY "Allow All Operations on Articles" ON public.articles
+    FOR ALL USING (true) WITH CHECK (true);
 
--- Profiles: Public read
+-- Profiles Policies
+DROP POLICY IF EXISTS "Public Read Profiles" ON public.profiles;
 CREATE POLICY "Public Read Profiles" ON public.profiles
     FOR SELECT USING (true);
 
--- Categories: Public read
+DROP POLICY IF EXISTS "Allow All Operations on Profiles" ON public.profiles;
+CREATE POLICY "Allow All Operations on Profiles" ON public.profiles
+    FOR ALL USING (true) WITH CHECK (true);
+
+-- Categories Policies
+DROP POLICY IF EXISTS "Public Read Categories" ON public.categories;
 CREATE POLICY "Public Read Categories" ON public.categories
     FOR SELECT USING (true);
 
--- Media: Public read
+-- Media Policies
+DROP POLICY IF EXISTS "Public Read Media" ON public.media;
 CREATE POLICY "Public Read Media" ON public.media
     FOR SELECT USING (true);
 
--- Contact / Subscriptions / Tips / Vetting: Insert allowed
+DROP POLICY IF EXISTS "Allow Insert Media" ON public.media;
+CREATE POLICY "Allow Insert Media" ON public.media
+    FOR INSERT WITH CHECK (true);
+
+-- Comments Policies
+DROP POLICY IF EXISTS "Public Read Comments" ON public.comments;
+CREATE POLICY "Public Read Comments" ON public.comments
+    FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Insert Comments" ON public.comments;
+CREATE POLICY "Public Insert Comments" ON public.comments
+    FOR INSERT WITH CHECK (true);
+
+-- Contact / Subscriptions / Tipoffs / Vetting
+DROP POLICY IF EXISTS "Public Insert Contact" ON public.contact_messages;
 CREATE POLICY "Public Insert Contact" ON public.contact_messages
     FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public Insert Subscribers" ON public.newsletter_subscribers;
 CREATE POLICY "Public Insert Subscribers" ON public.newsletter_subscribers
     FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public Insert Tipoffs" ON public.tipoffs;
 CREATE POLICY "Public Insert Tipoffs" ON public.tipoffs
     FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Insert Vetting" ON public.vetting_requests;
+CREATE POLICY "Public Insert Vetting" ON public.vetting_requests
+    FOR INSERT WITH CHECK (true);
+
+-- Storage Objects Policies
+DROP POLICY IF EXISTS "Public Storage Read" ON storage.objects;
+CREATE POLICY "Public Storage Read" ON storage.objects
+    FOR SELECT USING (bucket_id IN ('article-media', 'media'));
+
+DROP POLICY IF EXISTS "Public Storage Insert" ON storage.objects;
+CREATE POLICY "Public Storage Insert" ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id IN ('article-media', 'media'));
+
+DROP POLICY IF EXISTS "Public Storage Update" ON storage.objects;
+CREATE POLICY "Public Storage Update" ON storage.objects
+    FOR UPDATE USING (bucket_id IN ('article-media', 'media'));
 
 -- ====================================================================
 -- SEED DATA SETUP
@@ -360,3 +442,4 @@ INSERT INTO public.profiles (name, email, role, department, biography) VALUES
     ('Doreen Ngugi', 'doreenngugi38@gmail.com', 'managing_editor', 'Editorial Board', 'Managing Editor specializing in Devolution & National Policy.'),
     ('Muchui Mwirigi', 'editor@knews254.co.ke', 'editor', 'Newsroom Desk', 'Editor-in-Chief supervising investigative coverage.')
 ON CONFLICT (email) DO NOTHING;
+

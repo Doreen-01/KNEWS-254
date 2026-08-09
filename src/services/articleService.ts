@@ -123,147 +123,79 @@ export function mapDbRecordToArticle(record: any): Article {
   };
 }
 
-/**
- * Local Storage Persistence & Fallback Manager for Posted Articles
- */
-const STORAGE_KEY = 'knews254_local_articles_v2';
-
-function getLocalArticles(): (Article & { dbStatus?: ArticleStatus; rawRecord?: any })[] {
-  if (typeof window === 'undefined' || !window.localStorage) return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveLocalArticle(article: Article, dbStatus: ArticleStatus = 'published'): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    const list = getLocalArticles();
-    const existingIdx = list.findIndex(a => a.id === article.id || a.slug === article.slug);
-    const enriched = { ...article, dbStatus, rawRecord: { ...article, status: dbStatus } };
-    if (existingIdx >= 0) {
-      list[existingIdx] = enriched;
-    } else {
-      list.unshift(enriched);
-    }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn('Failed to save local article:', e);
-  }
-}
-
-function removeLocalArticle(id: string): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    const list = getLocalArticles().filter(a => a.id !== id && a.slug !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn('Failed to remove local article:', e);
-  }
-}
-
 const SELECT_QUERY = '*, primary_category:categories!articles_primary_category_id_fkey(id, name, slug), author:profiles!articles_author_id_fkey(id, name, role, profile_image)';
 
 /**
- * ARTICLE SERVICE API (SUPABASE EXCLUSIVE WITH RESILIENT LOCAL FALLBACK)
+ * ARTICLE SERVICE API (SUPABASE EXCLUSIVE)
  */
 export const articleService = {
   /**
    * List all public published articles (status = 'published', deleted_at IS NULL, published_at <= NOW())
    */
   async listPublishedArticles(): Promise<{ data: Article[]; error?: string }> {
-    let supabaseArticles: Article[] = [];
-    let errorMsg: string | undefined = undefined;
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const nowIso = new Date().toISOString();
-        const { data, error } = await supabase
-          .from('articles')
-          .select(SELECT_QUERY)
-          .eq('status', 'published')
-          .is('deleted_at', null)
-          .lte('published_at', nowIso)
-          .order('published_at', { ascending: false });
-
-        if (error) {
-          console.warn('Supabase fetch published articles warning:', error.message);
-          errorMsg = error.message;
-        } else if (data) {
-          supabaseArticles = data.map(mapDbRecordToArticle);
-        }
-      } catch (err: any) {
-        console.warn('Supabase fetch exception:', err);
-      }
+    if (!isSupabaseConfigured() || !supabase) {
+      return { 
+        data: [], 
+        error: 'Supabase credentials missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.' 
+      };
     }
 
-    // Merge local published articles
-    const localPublished = getLocalArticles().filter(a => (a.dbStatus || 'published') === 'published');
-    const mergedMap = new Map<string, Article>();
-    
-    // Local published articles take precedence
-    localPublished.forEach(a => mergedMap.set(a.id, a));
-    supabaseArticles.forEach(a => {
-      if (!mergedMap.has(a.id)) {
-        mergedMap.set(a.id, a);
-      }
-    });
+    try {
+      const nowIso = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .eq('status', 'published')
+        .is('deleted_at', null)
+        .lte('published_at', nowIso)
+        .order('published_at', { ascending: false });
 
-    return { data: Array.from(mergedMap.values()), error: errorMsg };
+      if (error) {
+        return { data: [], error: error.message };
+      }
+
+      const articles = (data || []).map(mapDbRecordToArticle);
+      return { data: articles };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Failed to list published articles.' };
+    }
   },
 
   /**
    * List ALL articles for CMS Editorial Management (drafts, submitted, approved, published, archived)
    */
   async listAllArticlesForCms(): Promise<{ data: (Article & { dbStatus: ArticleStatus; rawRecord: any })[]; error?: string }> {
-    let supabaseArticles: (Article & { dbStatus: ArticleStatus; rawRecord: any })[] = [];
-    let errorMsg: string | undefined = undefined;
-
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const { data, error } = await supabase
-          .from('articles')
-          .select(SELECT_QUERY)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          errorMsg = error.message;
-        } else if (data) {
-          supabaseArticles = data.map(record => ({
-            ...mapDbRecordToArticle(record),
-            dbStatus: record.status as ArticleStatus,
-            rawRecord: record
-          }));
-        }
-      } catch (err: any) {
-        errorMsg = err?.message;
-      }
+    if (!isSupabaseConfigured() || !supabase) {
+      return { data: [], error: 'Supabase credentials missing.' };
     }
 
-    const localArticles = getLocalArticles();
-    const mergedMap = new Map<string, (Article & { dbStatus: ArticleStatus; rawRecord: any })>();
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select(SELECT_QUERY)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
 
-    localArticles.forEach(a => mergedMap.set(a.id, a as any));
-    supabaseArticles.forEach(a => {
-      if (!mergedMap.has(a.id)) {
-        mergedMap.set(a.id, a);
+      if (error) {
+        return { data: [], error: error.message };
       }
-    });
 
-    return { data: Array.from(mergedMap.values()), error: errorMsg };
+      const articles = (data || []).map(record => ({
+        ...mapDbRecordToArticle(record),
+        dbStatus: record.status as ArticleStatus,
+        rawRecord: record
+      }));
+
+      return { data: articles };
+    } catch (err: any) {
+      return { data: [], error: err?.message || 'Failed to fetch CMS articles.' };
+    }
   },
 
   /**
    * Get single article by ID
    */
   async getArticleById(id: string): Promise<Article | null> {
-    const localMatch = getLocalArticles().find(a => a.id === id || a.slug === id);
-    if (localMatch) return localMatch;
-
     if (!isSupabaseConfigured() || !supabase) return null;
 
     try {
@@ -286,9 +218,6 @@ export const articleService = {
    * Get single article by Slug or ID
    */
   async getArticleBySlug(slug: string): Promise<Article | null> {
-    const localMatch = getLocalArticles().find(a => a.slug === slug || a.id === slug);
-    if (localMatch) return localMatch;
-
     if (!isSupabaseConfigured() || !supabase) return null;
 
     try {
@@ -324,7 +253,9 @@ export const articleService = {
       return this.listPublishedArticles();
     }
 
-    const { data: allPublished } = await this.listPublishedArticles();
+    const { data: allPublished, error } = await this.listPublishedArticles();
+    if (error) return { data: [], error };
+
     const targetCat = category.toLowerCase().trim();
     const filtered = allPublished.filter(a => {
       const c = (a.category || '').toLowerCase();
@@ -353,6 +284,7 @@ export const articleService = {
    */
   async listArticlesByCounty(countyName: string): Promise<{ data: Article[]; error?: string }> {
     const res = await this.listPublishedArticles();
+    if (res.error) return res;
     const q = countyName.toLowerCase().trim();
     const filtered = res.data.filter(a => (a.county || '').toLowerCase().includes(q));
     return { data: filtered };
@@ -363,6 +295,7 @@ export const articleService = {
    */
   async listBreakingNews(): Promise<{ data: Article[]; error?: string }> {
     const res = await this.listPublishedArticles();
+    if (res.error) return res;
     const filtered = res.data.filter(a => a.isBreaking);
     return { data: filtered };
   },
@@ -372,6 +305,7 @@ export const articleService = {
    */
   async listFeaturedArticles(): Promise<{ data: Article[]; error?: string }> {
     const res = await this.listPublishedArticles();
+    if (res.error) return res;
     const filtered = res.data.filter(a => a.isFeatured);
     return { data: filtered };
   },
@@ -382,6 +316,7 @@ export const articleService = {
   async searchArticles(term: string): Promise<{ data: Article[]; error?: string }> {
     if (!term || !term.trim()) return this.listPublishedArticles();
     const res = await this.listPublishedArticles();
+    if (res.error) return res;
     const q = term.toLowerCase().trim();
     const filtered = res.data.filter(a => 
       a.title.toLowerCase().includes(q) ||
@@ -393,7 +328,7 @@ export const articleService = {
   },
 
   /**
-   * Create new article draft or publication in Supabase (with instant local dispatch backup)
+   * Create new article in Supabase. Default status is 'submitted'.
    */
   async createArticle(payload: {
     title: string;
@@ -413,89 +348,60 @@ export const articleService = {
     authorId?: string;
     scheduledAt?: string;
   }): Promise<{ success: boolean; article?: Article; error?: string }> {
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase credentials are not configured.' };
+    }
+
     const slug = payload.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
 
-    const targetStatus = payload.status || 'published';
+    const targetStatus: ArticleStatus = payload.status || 'submitted';
     const isPublished = targetStatus === 'published';
-    const cleanCategory = (payload.category || 'politics').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    const newArticleObj: Article = {
-      id: 'art-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-      title: payload.title.trim(),
-      slug,
-      summary: payload.summary || payload.body.substring(0, 180) + '...',
-      content: payload.body,
-      category: (cleanCategory || 'politics') as NewsCategory,
-      author: {
-        id: payload.authorId || 'usr-author-kelly',
-        name: 'Kelly Muthomi Kinoti',
-        role: 'Executive Editor / Senior Journalist',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-      },
-      publishedAt: isPublished 
-        ? new Date().toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' EAT'
-        : 'Draft / In Review',
-      readTime: `${Math.max(2, Math.ceil((payload.body?.length || 500) / 800))} min read`,
-      imageUrl: payload.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
-      imageCaption: payload.imageCaption || '',
-      county: payload.county || 'Nairobi',
-      isBreaking: payload.isBreaking ?? false,
-      isFeatured: payload.isFeatured ?? true,
-      isEditorPick: payload.isEditorPick ?? false,
-      viewCount: 1,
-      tags: ['Kenya', 'Knews254', payload.county || 'Nairobi']
-    };
+    try {
+      const categoryId = await resolveCategoryId(payload.category || 'politics');
+      const dbPayload: any = {
+        title: payload.title.trim(),
+        slug,
+        summary: payload.summary || payload.body.substring(0, 180) + '...',
+        body: payload.body,
+        status: targetStatus,
+        county: payload.county || 'Nairobi',
+        featured_image_url: payload.imageUrl || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1200&auto=format&fit=crop&q=80',
+        featured_image_path: payload.imagePath || null,
+        image_caption: payload.imageCaption || '',
+        image_credit: payload.imageCredit || '',
+        is_featured: payload.isFeatured ?? true,
+        is_breaking: payload.isBreaking ?? false,
+        is_editor_choice: payload.isEditorPick ?? false,
+        primary_category_id: categoryId || undefined,
+        published_at: isPublished ? new Date().toISOString() : null,
+        scheduled_at: payload.scheduledAt || null,
+        author_id: payload.authorId || undefined
+      };
 
-    // Attempt Supabase insert
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        const categoryId = await resolveCategoryId(payload.category || 'politics');
-        const dbPayload: any = {
-          title: payload.title.trim(),
-          slug,
-          summary: newArticleObj.summary,
-          body: payload.body,
-          status: targetStatus,
-          county: payload.county || 'Nairobi',
-          featured_image_url: newArticleObj.imageUrl,
-          featured_image_path: payload.imagePath || null,
-          image_caption: payload.imageCaption || '',
-          image_credit: payload.imageCredit || '',
-          is_featured: newArticleObj.isFeatured,
-          is_breaking: newArticleObj.isBreaking,
-          is_editor_choice: newArticleObj.isEditorPick,
-          primary_category_id: categoryId || undefined,
-          published_at: isPublished ? new Date().toISOString() : null,
-          scheduled_at: payload.scheduledAt || null,
-          author_id: payload.authorId || undefined
-        };
+      const { data, error } = await supabase
+        .from('articles')
+        .insert([dbPayload])
+        .select(SELECT_QUERY)
+        .single();
 
-        const { data, error } = await supabase
-          .from('articles')
-          .insert([dbPayload])
-          .select(SELECT_QUERY)
-          .single();
-
-        if (!error && data) {
-          const supabaseArticle = mapDbRecordToArticle(data);
-          saveLocalArticle(supabaseArticle, targetStatus);
-          if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
-          return { success: true, article: supabaseArticle };
-        } else if (error) {
-          console.warn('Supabase insert rejected by RLS/permissions, persisting locally:', error.message);
-        }
-      } catch (err: any) {
-        console.warn('Supabase insert exception, persisting locally:', err);
+      if (error) {
+        return { success: false, error: error.message };
       }
-    }
 
-    // Local Persistence Fallback
-    saveLocalArticle(newArticleObj, targetStatus);
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
-    return { success: true, article: newArticleObj };
+      if (data) {
+        const supabaseArticle = mapDbRecordToArticle(data);
+        if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
+        return { success: true, article: supabaseArticle };
+      }
+
+      return { success: false, error: 'Article created but no record returned.' };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to create article.' };
+    }
   },
 
   /**
@@ -573,40 +479,9 @@ export const articleService = {
         await linkMediaToArticle(id, updates.mediaId, true, 0);
       }
 
-      // Update local storage if matched
-      const localArticles = getLocalArticles();
-      const localIdx = localArticles.findIndex(a => a.id === id || a.slug === id);
-      if (localIdx >= 0) {
-        const item = localArticles[localIdx];
-        if (updates.title) item.title = updates.title.trim();
-        if (updates.summary) item.summary = updates.summary;
-        if (updates.body) item.content = updates.body;
-        if (updates.county) item.county = updates.county;
-        if (updates.imageUrl) item.imageUrl = updates.imageUrl;
-        if (updates.category) item.category = updates.category as any;
-        if (updates.status) item.dbStatus = updates.status;
-        saveLocalArticle(item, item.dbStatus || 'published');
-      }
-
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
-      return { success: true, article: data ? mapDbRecordToArticle(data) : (localIdx >= 0 ? localArticles[localIdx] : undefined) };
+      return { success: true, article: data ? mapDbRecordToArticle(data) : undefined };
     } catch (err: any) {
-      // Local fallback
-      const localArticles = getLocalArticles();
-      const localIdx = localArticles.findIndex(a => a.id === id || a.slug === id);
-      if (localIdx >= 0) {
-        const item = localArticles[localIdx];
-        if (updates.title) item.title = updates.title.trim();
-        if (updates.summary) item.summary = updates.summary;
-        if (updates.body) item.content = updates.body;
-        if (updates.county) item.county = updates.county;
-        if (updates.imageUrl) item.imageUrl = updates.imageUrl;
-        if (updates.category) item.category = updates.category as any;
-        if (updates.status) item.dbStatus = updates.status;
-        saveLocalArticle(item, item.dbStatus || 'published');
-        if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
-        return { success: true, article: item };
-      }
       return { success: false, error: err?.message || 'Failed to update article.' };
     }
   },
@@ -623,20 +498,25 @@ export const articleService = {
    * Soft Delete Article (set deleted_at = NOW())
    */
   async softDeleteArticle(id: string): Promise<{ success: boolean; error?: string }> {
-    removeLocalArticle(id);
-    if (isSupabaseConfigured() && supabase) {
-      try {
-        await supabase
-          .from('articles')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', id);
-      } catch (err: any) {
-        console.warn('Supabase soft delete error:', err);
-      }
+    if (!isSupabaseConfigured() || !supabase) {
+      return { success: false, error: 'Supabase is not configured.' };
     }
 
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
-    return { success: true };
+    try {
+      const { error } = await supabase
+        .from('articles')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to soft delete article.' };
+    }
   },
 
   /**
