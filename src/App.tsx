@@ -461,10 +461,12 @@ export default function App() {
               </section>
             )}
 
-            {/* Kenya 2027 Election Center Hub */}
+            {/* Kenya 2027 Election Center Hub (Temporarily hidden - saved for later) */}
+            {/* 
             <section>
               <ElectionCentre />
             </section>
+            */}
 
             {/* 47 Kenya Counties Hyper-Local News Hub */}
             <section>

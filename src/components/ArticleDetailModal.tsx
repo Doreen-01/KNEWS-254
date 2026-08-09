@@ -332,51 +332,47 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
           {/* Article Main Text Content */}
           <div className="prose prose-invert max-w-none text-slate-200 text-sm sm:text-base leading-relaxed space-y-4">
-            {(() => {
-              const paragraphs = article.content.split('\n\n').filter(Boolean);
+            {article.content.split('\n\n').filter(Boolean).map((paragraph, index, array) => {
+              const isFirst = index === 0;
+              const isMidway = index === 1 || (index === Math.floor(array.length / 2) && index > 0);
               const inlineRelated = relatedArticles[0];
 
-              return paragraphs.map((paragraph, index) => {
-                const isFirst = index === 0;
-                const isMidway = index === 1 || (index === Math.floor(paragraphs.length / 2) && index > 0);
+              return (
+                <div key={`article-para-${index}`} className="space-y-4">
+                  <p className={isFirst ? 'text-slate-100 font-medium text-base sm:text-lg leading-relaxed first-letter:float-left first-letter:text-4xl first-letter:font-black first-letter:mr-2.5 first-letter:text-red-500 first-letter:font-serif' : 'text-slate-300'}>
+                    {paragraph}
+                  </p>
 
-                return (
-                  <React.Fragment key={index}>
-                    <p className={isFirst ? 'text-slate-100 font-medium text-base sm:text-lg leading-relaxed first-letter:float-left first-letter:text-4xl first-letter:font-black first-letter:mr-2.5 first-letter:text-red-500 first-letter:font-serif' : 'text-slate-300'}>
-                      {paragraph}
-                    </p>
-
-                    {/* Inline 'ALSO READ THIS' Callout Box */}
-                    {isMidway && inlineRelated && (
-                      <div 
-                        onClick={() => onSelectArticle(inlineRelated)}
-                        className="my-6 p-4 bg-slate-950 border-l-4 border-amber-500 rounded-r-2xl border-y border-r border-slate-800/90 shadow-xl flex items-start gap-3.5 group cursor-pointer hover:border-amber-400 hover:bg-slate-900/90 transition-all duration-300"
-                      >
-                        <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/30 text-amber-400 shrink-0 group-hover:scale-110 transition-transform">
-                          <BookOpen className="w-5 h-5" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-mono font-black text-amber-400 uppercase tracking-widest">
-                              ALSO READ ON KNEWS254:
-                            </span>
-                            <span className="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">
-                              {inlineRelated.category}
-                            </span>
-                          </div>
-                          <h4 className="text-sm font-bold text-slate-100 group-hover:text-amber-300 transition-colors line-clamp-2 leading-snug">
-                            {inlineRelated.title}
-                          </h4>
-                          <span className="text-[11px] text-slate-400 flex items-center gap-2 font-mono">
-                            <span>Read time: {inlineRelated.readTime}</span> • <span className="text-amber-400 font-semibold group-hover:underline flex items-center gap-0.5">Click to read dispatch <ArrowRight className="w-3 h-3" /></span>
+                  {/* Inline 'ALSO READ THIS' Callout Box */}
+                  {isMidway && inlineRelated && (
+                    <div 
+                      onClick={() => onSelectArticle(inlineRelated)}
+                      className="my-6 p-4 bg-slate-950 border-l-4 border-amber-500 rounded-r-2xl border-y border-r border-slate-800/90 shadow-xl flex items-start gap-3.5 group cursor-pointer hover:border-amber-400 hover:bg-slate-900/90 transition-all duration-300"
+                    >
+                      <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/30 text-amber-400 shrink-0 group-hover:scale-110 transition-transform">
+                        <BookOpen className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-black text-amber-400 uppercase tracking-widest">
+                            ALSO READ ON KNEWS254:
+                          </span>
+                          <span className="text-[9px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono">
+                            {inlineRelated.category}
                           </span>
                         </div>
+                        <h4 className="text-sm font-bold text-slate-100 group-hover:text-amber-300 transition-colors line-clamp-2 leading-snug">
+                          {inlineRelated.title}
+                        </h4>
+                        <span className="text-[11px] text-slate-400 flex items-center gap-2 font-mono">
+                          <span>Read time: {inlineRelated.readTime}</span> • <span className="text-amber-400 font-semibold group-hover:underline flex items-center gap-0.5">Click to read dispatch <ArrowRight className="w-3 h-3" /></span>
+                        </span>
                       </div>
-                    )}
-                  </React.Fragment>
-                );
-              });
-            })()}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Tags Cloud */}

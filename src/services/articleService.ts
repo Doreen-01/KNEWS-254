@@ -156,12 +156,19 @@ export const articleService = {
         return { data: FEATURED_ARTICLES, isFallback: true, error: error.message };
       }
 
-      const articles = (data || []).map(mapDbRecordToArticle);
-      if (articles.length === 0) {
+      const dbArticles = (data || []).map(mapDbRecordToArticle);
+      
+      // Combine FEATURED_ARTICLES with dbArticles (preferring DB articles if same ID/slug, but ensuring new featured articles exist)
+      const existingSlugsAndTitles = new Set(dbArticles.map(a => a.slug || a.title.toLowerCase()));
+      const featuredToInclude = FEATURED_ARTICLES.filter(fa => !existingSlugsAndTitles.has(fa.slug || fa.title.toLowerCase()));
+
+      const combinedArticles = [...featuredToInclude, ...dbArticles];
+
+      if (combinedArticles.length === 0) {
         return { data: FEATURED_ARTICLES, isFallback: true };
       }
 
-      return { data: articles, isFallback: false };
+      return { data: combinedArticles, isFallback: false };
     } catch (err: any) {
       return { data: FEATURED_ARTICLES, isFallback: true, error: err?.message || 'Failed to list published articles.' };
     }
@@ -209,9 +216,15 @@ export const articleService = {
   /**
    * List ALL articles for CMS Editorial Management (drafts, submitted, approved, published, archived)
    */
-  async listAllArticlesForCms(): Promise<{ data: (Article & { dbStatus: ArticleStatus; rawRecord: any })[]; error?: string }> {
+  async listAllArticlesForCms(): Promise<{ data: (Article & { dbStatus: ArticleStatus; rawRecord?: any })[]; error?: string }> {
+    const featuredMapped = FEATURED_ARTICLES.map(a => ({
+      ...a,
+      dbStatus: 'published' as ArticleStatus,
+      rawRecord: null
+    }));
+
     if (!isSupabaseConfigured() || !supabase) {
-      return { data: [], error: 'Supabase credentials missing.' };
+      return { data: featuredMapped };
     }
 
     try {
@@ -222,18 +235,21 @@ export const articleService = {
         .order('created_at', { ascending: false });
 
       if (error) {
-        return { data: [], error: error.message };
+        return { data: featuredMapped, error: error.message };
       }
 
-      const articles = (data || []).map(record => ({
+      const dbArticles = (data || []).map(record => ({
         ...mapDbRecordToArticle(record),
         dbStatus: record.status as ArticleStatus,
         rawRecord: record
       }));
 
-      return { data: articles };
+      const dbSlugsAndTitles = new Set(dbArticles.map(a => a.slug || a.title.toLowerCase()));
+      const featuredToInclude = featuredMapped.filter(fa => !dbSlugsAndTitles.has(fa.slug || fa.title.toLowerCase()));
+
+      return { data: [...featuredToInclude, ...dbArticles] };
     } catch (err: any) {
-      return { data: [], error: err?.message || 'Failed to fetch CMS articles.' };
+      return { data: featuredMapped, error: err?.message || 'Failed to fetch CMS articles.' };
     }
   },
 
@@ -241,53 +257,53 @@ export const articleService = {
    * Get single article by ID
    */
   async getArticleById(id: string): Promise<Article | null> {
-    if (!isSupabaseConfigured() || !supabase) return null;
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('articles')
+          .select(SELECT_QUERY)
+          .eq('id', id)
+          .maybeSingle();
 
-    try {
-      const { data, error } = await supabase
-        .from('articles')
-        .select(SELECT_QUERY)
-        .eq('id', id)
-        .maybeSingle();
-
-      if (!error && data) {
-        return mapDbRecordToArticle(data);
+        if (!error && data) {
+          return mapDbRecordToArticle(data);
+        }
+      } catch (err) {
+        console.error('Error fetching article by id:', err);
       }
-    } catch (err) {
-      console.error('Error fetching article by id:', err);
     }
-    return null;
+    return FEATURED_ARTICLES.find(a => a.id === id) || null;
   },
 
   /**
    * Get single article by Slug or ID
    */
   async getArticleBySlug(slug: string): Promise<Article | null> {
-    if (!isSupabaseConfigured() || !supabase) return null;
-
-    try {
-      let { data, error } = await supabase
-        .from('articles')
-        .select(SELECT_QUERY)
-        .eq('slug', slug)
-        .maybeSingle();
-
-      if (!data) {
-        const { data: idData } = await supabase
+    if (isSupabaseConfigured() && supabase) {
+      try {
+        let { data, error } = await supabase
           .from('articles')
           .select(SELECT_QUERY)
-          .eq('id', slug)
+          .eq('slug', slug)
           .maybeSingle();
-        data = idData;
-      }
 
-      if (data) {
-        return mapDbRecordToArticle(data);
+        if (!data) {
+          const { data: idData } = await supabase
+            .from('articles')
+            .select(SELECT_QUERY)
+            .eq('id', slug)
+            .maybeSingle();
+          data = idData;
+        }
+
+        if (data) {
+          return mapDbRecordToArticle(data);
+        }
+      } catch (err) {
+        console.error('Error fetching article by slug:', err);
       }
-    } catch (err) {
-      console.error('Error fetching article by slug:', err);
     }
-    return null;
+    return FEATURED_ARTICLES.find(a => a.slug === slug || a.id === slug) || null;
   },
 
   /**
