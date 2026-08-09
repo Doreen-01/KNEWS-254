@@ -468,15 +468,19 @@ export default function App() {
             </section>
             */}
 
-            {/* 47 Kenya Counties Hyper-Local News Hub */}
+            {/* 47 Kenya Counties Hyper-Local News Hub (Temporarily hidden - saved for later) */}
+            {/* 
             <section>
               <CountyNewsExplorer />
             </section>
+            */}
 
-            {/* Knews254 Verify Fact Check Center */}
+            {/* Knews254 Verify Fact Check Center (Temporarily hidden for a cleaner homepage stream) */}
+            {/* 
             <section>
               <FactCheckHub />
             </section>
+            */}
 
             {/* Live Blog Stream & Parliament Coverage */}
             <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
