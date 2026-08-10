@@ -164,11 +164,7 @@ export const articleService = {
 
       const combinedArticles = [...featuredToInclude, ...dbArticles];
 
-      if (combinedArticles.length === 0) {
-        return { data: FEATURED_ARTICLES, isFallback: true };
-      }
-
-      return { data: combinedArticles, isFallback: false };
+      return { data: combinedArticles, isFallback: dbArticles.length === 0 };
     } catch (err: any) {
       return { data: FEATURED_ARTICLES, isFallback: true, error: err?.message || 'Failed to list published articles.' };
     }

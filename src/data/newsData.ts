@@ -90,31 +90,31 @@ export const AUTHORS_LIST: Author[] = [
 
 export const FEATURED_ARTICLES: Article[] = [
   {
-    id: "art-sifuna-shif-audit-2026",
-    title: "Senator Edwin Sifuna Demands Forensic Audit of SHIF and Housing Levy Funds in Fiery Senate Floor Address",
-    slug: "senator-edwin-sifuna-demands-forensic-audit-shif-housing-levy",
-    summary: "Nairobi Senator and ODM Secretary-General Edwin Sifuna has launched a blistering critique against executive taxation, demanding an immediate parliamentary forensic audit into SHIF healthcare deductions and housing fund allocations.",
-    content: "Nairobi, Kenya — In a fiery afternoon plenary session at Parliament Buildings, Nairobi Senator and Orange Democratic Movement (ODM) Secretary-General Edwin Sifuna delivered an uncompromising address from the Senate floor, demanding an immediate, independent parliamentary forensic audit into the collection, management, and disbursement of the Social Health Authority (SHA/SHIF) and National Housing Development Fund levies.\n\nAddressing a packed Senate chamber alongside lawmakers from across the political spectrum, Sifuna expressed deep concern over the mounting financial pressure placed on ordinary Kenyan households and working-class citizens. He highlighted that despite continuous, non-negotiable monthly salary deductions, public healthcare facilities across Nairobi, Kisumu, Nakuru, Meru, and Mombasa remain under severe operational distress, with many level 4 and level 5 dispensaries reporting acute shortages of basic pharmaceuticals, essential diagnostic reagents, and vital emergency care equipment while turning away vulnerable patients.\n\n\"Kenyans are being subjected to higher health insurance and housing levies every single month, yet when our mothers, youth, and elderly citizens visit public hospitals, they are routinely forced to buy basic medicine out of pocket because SHA claims remain unpaid to service providers,\" Sifuna declared with passion before the Senate floor. \"Under Article 43 of the Constitution of Kenya 2010, every citizen has an inherent right to the highest attainable standard of health. We cannot allow an opaque administrative transition from the former National Hospital Insurance Fund (NHIF) to paralyze healthcare delivery across our 47 counties while billions of hard-earned public contributions remain shrouded in mystery.\"\n\nThe vocal Nairobi Senator urged the Senate Standing Committee on Health to issue immediate, non-negotiable summonses to the Cabinet Secretary for Health and the SHA Board Chairperson to present a transparent, line-item ledger accounting for over Ksh 24 billion in statutory worker contributions collected since the new health framework was gazetted. Furthermore, Sifuna addressed ongoing debate within political circles regarding bipartisan legislative consultations, firmly asserting that the opposition’s primary responsibility remains safeguarding the public welfare. \"Our mandate as elected leaders is not to broker backroom political deals, but to defend Wanjiku, mama mbogas, boda boda operators, and the youth struggling under rising inflation,\" Sifuna emphasized to enthusiastic thumping of bench tops.\n\nIn response, Senate Majority Leader Aaron Cheruiyot defended the government's fiscal restructuring, maintaining that initial operational friction is expected during a complete systemic overhaul aimed at achieving sustainable universal health coverage. Undeterred, Sifuna formally announced that his office will table a procedural motion on Tuesday seeking a binding Senate order to freeze all new non-essential tax deductions until full public participation and constitutional compliance are verified by the Auditor General.",
+    id: "art-sifuna-linda-mwananchi-2026",
+    title: "Edwin Sifuna Rallies Western Kenya in 'Linda Mwananchi' Tour, Rejects Experience as Sole Leadership Metric",
+    slug: "edwin-sifuna-linda-mwananchi-western-kenya-tour-leadership",
+    summary: "Nairobi Senator and ODM Secretary-General Edwin Sifuna has ignited political debate across Kakamega and Mumias, urging Kenyans to reject past experience as the primary measure of leadership while rallying support for a youth-led transformation.",
+    content: "Mumias, Kenya — Nairobi Senator and Orange Democratic Movement (ODM) Secretary-General Edwin Sifuna has taken his high-octane \"Linda Mwananchi\" grassroots movement to Western Kenya, drawing massive crowds across Mumias and Kakamega. Speaking during a high-profile interdenominational church service and subsequent public rallies flanked by several Western governors, senators, and grassroots leaders, Sifuna delivered a passionate address challenging traditional political benchmarks, declaring that past political experience has repeatedly failed to deliver economic liberation to ordinary Kenyan citizens.\n\nAddressing enthusiastic supporters who presented him with traditional symbolic gifts, Sifuna argued forcefully that the nation stands at a critical crossroads that demands bold, energetic, and untainted leadership. \"For decades, we have been told that leadership requires decades of political experience, yet that very experience has burdened our youth with soaring unemployment, unpayable statutory deductions, and decaying public infrastructure,\" Sifuna asserted before an responsive audience. \"Experience without integrity and empathy is a recipe for stagnation. It is time for Kenyans to trust a new generation of visionary leaders who understand the daily struggles of the mama mboga, the boda boda operator, and the unemployed university graduate.\"\n\nThe outspoken lawmaker also took direct aim at executive economic blueprints, dismissing the government’s 'Vision 2060' roadmap as an unrealistic political distraction from immediate public hardship. Sifuna emphasized that high statutory deductions under the Social Health Authority (SHA/SHIF) and National Housing Development Fund continue to severely erode household purchasing power without delivering tangible improvements in public hospitals or affordable housing accessibility. He reiterated that his political consultations across Western, Nyanza, and Coastal regions are strictly anchored on safeguarding citizen rights and enforcing parliamentary accountability rather than brokering secretive coalition pacts.\n\nReaffirming his commitment to grassroots mobilization under the Linda Mwananchi banner, Sifuna emphasized that political cooperation must be earned through genuine public service rather than top-down executive directives. \"Our movement is not built on executive favours or boardroom alignments; it is rooted directly in the aspirations of everyday citizens fighting for economic justice,\" Sifuna declared to loud cheers. His fiery stance has sparked intense nationwide political conversation, with allies praising his courageous defense of the public interest while political rivals closely monitor his growing regional influence ahead of upcoming legislative sessions.",
     category: "politics",
-    subcategory: "Parliamentary Affairs",
-    additionalCategories: ["breaking", "latest", "investigations"],
+    subcategory: "Political Movements & Linda Mwananchi",
+    additionalCategories: ["breaking", "latest", "politics"],
     author: {
       id: "auth-0",
       name: "Kelly Muthomi Kinoti",
       role: "Founder, Chairman & Super Administrator",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
     },
-    publishedAt: "2026-08-09T10:30:00Z",
+    publishedAt: "2026-08-09T11:15:00Z",
     readTime: "5 min read",
     imageUrl: "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?w=1200&auto=format&fit=crop&q=80",
-    imageCaption: "Nairobi Senator Edwin Sifuna addressing Parliament Buildings in Nairobi.",
-    location: "Senate Chamber, Parliament Buildings",
-    county: "Nairobi",
+    imageCaption: "Nairobi Senator Edwin Sifuna addressing a Linda Mwananchi rally in Mumias, Kakamega County.",
+    location: "Mumias, Kakamega County",
+    county: "Kakamega",
     isBreaking: true,
     isTrending: true,
     isFeatured: true,
-    viewCount: 52400,
-    tags: ["Edwin Sifuna", "ODM", "SHIF Audit", "Senate Kenya", "Kelly Muthomi Kinoti", "Healthcare"]
+    viewCount: 68400,
+    tags: ["Edwin Sifuna", "Linda Mwananchi", "ODM", "Mumias Rally", "Kelly Muthomi Kinoti", "Kakamega"]
   },
   {
     id: "art-high-court-election-date-2026",
