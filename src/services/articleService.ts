@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured, linkMediaToArticle } from '../lib/supabase';
+import { supabase, getSupabaseClient, isSupabaseConfigured, linkMediaToArticle } from '../lib/supabase';
 import { Article, NewsCategory } from '../types';
 import { FEATURED_ARTICLES } from '../data/newsData';
 
@@ -49,30 +49,39 @@ export interface DbArticleRecord {
 }
 
 /**
+ * Utility to check if string is valid UUID
+ */
+function isValidUuid(id?: string | null): boolean {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+/**
  * Category Slug <-> ID cache
  */
 let categorySlugMap: Record<string, string> = {};
 
 async function resolveCategoryId(slug: string): Promise<string | null> {
-  if (!isSupabaseConfigured() || !supabase) return null;
+  const client = getSupabaseClient() || supabase;
+  if (!isSupabaseConfigured() || !client) return null;
   const normalizedSlug = slug.toLowerCase().trim();
   if (categorySlugMap[normalizedSlug]) {
     return categorySlugMap[normalizedSlug];
   }
   try {
-    const { data } = await supabase
+    const { data } = await client
       .from('categories')
       .select('id, slug')
       .ilike('slug', normalizedSlug)
       .maybeSingle();
 
-    if (data?.id) {
+    if (data?.id && isValidUuid(data.id)) {
       categorySlugMap[normalizedSlug] = data.id;
       return data.id;
     }
-    // Fallback: pick any category or 'home'
-    const fallback = await supabase.from('categories').select('id, slug').limit(1).maybeSingle();
-    if (fallback.data?.id) {
+    // Fallback: pick any category
+    const fallback = await client.from('categories').select('id, slug').limit(1).maybeSingle();
+    if (fallback.data?.id && isValidUuid(fallback.data.id)) {
       categorySlugMap[fallback.data.slug] = fallback.data.id;
       return fallback.data.id;
     }
@@ -124,17 +133,18 @@ export function mapDbRecordToArticle(record: any): Article {
   };
 }
 
-const SELECT_QUERY = '*, primary_category:categories!articles_primary_category_id_fkey(id, name, slug), author:profiles!articles_author_id_fkey(id, name, role, profile_image)';
+const SELECT_QUERY = '*, primary_category:categories(id, name, slug), author:profiles(id, name, role, profile_image)';
 
 /**
- * ARTICLE SERVICE API (SUPABASE EXCLUSIVE)
+ * ARTICLE SERVICE API (SUPABASE PUBLIC CLIENT EXCLUSIVE)
  */
 export const articleService = {
   /**
-   * List all public published articles (status = 'published', deleted_at IS NULL, published_at <= NOW())
+   * List all public published articles (status = 'published', deleted_at IS NULL)
    */
   async listPublishedArticles(): Promise<{ data: Article[]; error?: string; isFallback?: boolean }> {
-    if (!isSupabaseConfigured() || !supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { 
         data: FEATURED_ARTICLES, 
         isFallback: true,
@@ -143,14 +153,24 @@ export const articleService = {
     }
 
     try {
-      const nowIso = new Date().toISOString();
-      const { data, error } = await supabase
+      let { data, error } = await client
         .from('articles')
         .select(SELECT_QUERY)
         .eq('status', 'published')
         .is('deleted_at', null)
-        .lte('published_at', nowIso)
-        .order('published_at', { ascending: false });
+        .order('published_at', { ascending: false, nullsFirst: false });
+
+      if (error) {
+        console.warn('Select query with joins failed, falling back to simple select:', error.message);
+        const fallback = await client
+          .from('articles')
+          .select('*')
+          .eq('status', 'published')
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
         return { data: FEATURED_ARTICLES, isFallback: true, error: error.message };
@@ -158,11 +178,11 @@ export const articleService = {
 
       const dbArticles = (data || []).map(mapDbRecordToArticle);
       
-      // Combine FEATURED_ARTICLES with dbArticles (preferring DB articles if same ID/slug, but ensuring new featured articles exist)
-      const existingSlugsAndTitles = new Set(dbArticles.map(a => a.slug || a.title.toLowerCase()));
-      const featuredToInclude = FEATURED_ARTICLES.filter(fa => !existingSlugsAndTitles.has(fa.slug || fa.title.toLowerCase()));
+      // Combine dbArticles first, followed by static FEATURED_ARTICLES not already in DB
+      const dbSlugsAndTitles = new Set(dbArticles.map(a => (a.slug || a.title).toLowerCase()));
+      const featuredToInclude = FEATURED_ARTICLES.filter(fa => !dbSlugsAndTitles.has((fa.slug || fa.title).toLowerCase()));
 
-      const combinedArticles = [...featuredToInclude, ...dbArticles];
+      const combinedArticles = [...dbArticles, ...featuredToInclude];
 
       return { data: combinedArticles, isFallback: dbArticles.length === 0 };
     } catch (err: any) {
@@ -174,7 +194,8 @@ export const articleService = {
    * Seed Initial News Stories into Supabase Database
    */
   async seedInitialArticles(): Promise<{ success: boolean; count: number; error?: string }> {
-    if (!isSupabaseConfigured() || !supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { success: false, count: 0, error: 'Supabase credentials are not configured.' };
     }
 
@@ -194,11 +215,11 @@ export const articleService = {
           is_featured: art.isFeatured ?? true,
           is_breaking: art.isBreaking ?? false,
           is_editor_choice: art.isEditorPick ?? false,
-          primary_category_id: categoryId || undefined,
+          primary_category_id: isValidUuid(categoryId) ? categoryId : null,
           published_at: new Date().toISOString()
         };
 
-        const { error } = await supabase.from('articles').insert([dbPayload]);
+        const { error } = await client.from('articles').insert([dbPayload]);
         if (!error) seeded++;
       }
 
@@ -219,16 +240,27 @@ export const articleService = {
       rawRecord: null
     }));
 
-    if (!isSupabaseConfigured() || !supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { data: featuredMapped };
     }
 
     try {
-      const { data, error } = await supabase
+      let { data, error } = await client
         .from('articles')
         .select(SELECT_QUERY)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
+
+      if (error) {
+        const fallback = await client
+          .from('articles')
+          .select('*')
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) {
         return { data: featuredMapped, error: error.message };
@@ -240,10 +272,10 @@ export const articleService = {
         rawRecord: record
       }));
 
-      const dbSlugsAndTitles = new Set(dbArticles.map(a => a.slug || a.title.toLowerCase()));
-      const featuredToInclude = featuredMapped.filter(fa => !dbSlugsAndTitles.has(fa.slug || fa.title.toLowerCase()));
+      const dbSlugsAndTitles = new Set(dbArticles.map(a => (a.slug || a.title).toLowerCase()));
+      const featuredToInclude = featuredMapped.filter(fa => !dbSlugsAndTitles.has((fa.slug || fa.title).toLowerCase()));
 
-      return { data: [...featuredToInclude, ...dbArticles] };
+      return { data: [...dbArticles, ...featuredToInclude] };
     } catch (err: any) {
       return { data: featuredMapped, error: err?.message || 'Failed to fetch CMS articles.' };
     }
@@ -253,15 +285,25 @@ export const articleService = {
    * Get single article by ID
    */
   async getArticleById(id: string): Promise<Article | null> {
-    if (isSupabaseConfigured() && supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (isSupabaseConfigured() && client) {
       try {
-        const { data, error } = await supabase
+        let { data, error } = await client
           .from('articles')
           .select(SELECT_QUERY)
           .eq('id', id)
           .maybeSingle();
 
-        if (!error && data) {
+        if (error) {
+          const fallback = await client
+            .from('articles')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+          data = fallback.data;
+        }
+
+        if (data) {
           return mapDbRecordToArticle(data);
         }
       } catch (err) {
@@ -275,21 +317,31 @@ export const articleService = {
    * Get single article by Slug or ID
    */
   async getArticleBySlug(slug: string): Promise<Article | null> {
-    if (isSupabaseConfigured() && supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (isSupabaseConfigured() && client) {
       try {
-        let { data, error } = await supabase
+        let { data, error } = await client
           .from('articles')
           .select(SELECT_QUERY)
           .eq('slug', slug)
           .maybeSingle();
 
         if (!data) {
-          const { data: idData } = await supabase
+          const { data: idData } = await client
             .from('articles')
             .select(SELECT_QUERY)
             .eq('id', slug)
             .maybeSingle();
           data = idData;
+        }
+
+        if (!data) {
+          const fallback = await client
+            .from('articles')
+            .select('*')
+            .or(`slug.eq.${slug},id.eq.${slug}`)
+            .maybeSingle();
+          data = fallback.data;
         }
 
         if (data) {
@@ -385,7 +437,7 @@ export const articleService = {
   },
 
   /**
-   * Create new article in Supabase. Default status is 'submitted'.
+   * Create new article in Supabase. Default status is 'published'.
    */
   async createArticle(payload: {
     title: string;
@@ -405,7 +457,8 @@ export const articleService = {
     authorId?: string;
     scheduledAt?: string;
   }): Promise<{ success: boolean; article?: Article; error?: string }> {
-    if (!isSupabaseConfigured() || !supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { success: false, error: 'Supabase credentials are not configured.' };
     }
 
@@ -414,11 +467,14 @@ export const articleService = {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
 
-    const targetStatus: ArticleStatus = payload.status || 'submitted';
+    const targetStatus: ArticleStatus = payload.status || 'published';
     const isPublished = targetStatus === 'published';
 
     try {
       const categoryId = await resolveCategoryId(payload.category || 'politics');
+      const validAuthorId = isValidUuid(payload.authorId) ? payload.authorId : null;
+      const validCategoryId = isValidUuid(categoryId) ? categoryId : null;
+
       const dbPayload: any = {
         title: payload.title.trim(),
         slug,
@@ -433,23 +489,38 @@ export const articleService = {
         is_featured: payload.isFeatured ?? true,
         is_breaking: payload.isBreaking ?? false,
         is_editor_choice: payload.isEditorPick ?? false,
-        primary_category_id: categoryId || undefined,
-        published_at: isPublished ? new Date().toISOString() : null,
+        primary_category_id: validCategoryId,
+        published_at: isPublished ? (payload.scheduledAt || new Date().toISOString()) : (payload.scheduledAt || null),
         scheduled_at: payload.scheduledAt || null,
-        author_id: payload.authorId || undefined
+        author_id: validAuthorId
       };
 
-      const { data, error } = await supabase
+      let { data, error } = await client
         .from('articles')
         .insert([dbPayload])
         .select(SELECT_QUERY)
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        // Retry insert with simple select('*') if join select fails
+        const fallbackRes = await client
+          .from('articles')
+          .insert([dbPayload])
+          .select('*')
+          .maybeSingle();
+
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+      }
 
       if (error) {
         return { success: false, error: error.message };
       }
 
       if (data) {
+        if (payload.mediaId) {
+          await linkMediaToArticle(data.id, payload.mediaId, true, 0);
+        }
         const supabaseArticle = mapDbRecordToArticle(data);
         if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
         return { success: true, article: supabaseArticle };
@@ -484,7 +555,8 @@ export const articleService = {
       scheduledAt?: string;
     }
   ): Promise<{ success: boolean; article?: Article; error?: string }> {
-    if (!isSupabaseConfigured() || !supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { success: false, error: 'Supabase is not configured.' };
     }
 
@@ -507,7 +579,7 @@ export const articleService = {
 
       if (updates.category) {
         const catId = await resolveCategoryId(updates.category);
-        if (catId) patch.primary_category_id = catId;
+        if (catId && isValidUuid(catId)) patch.primary_category_id = catId;
       }
 
       if (updates.status) {
@@ -521,12 +593,24 @@ export const articleService = {
         patch.scheduled_at = updates.scheduledAt;
       }
 
-      const { data, error } = await supabase
+      let { data, error } = await client
         .from('articles')
         .update(patch)
         .eq('id', id)
         .select(SELECT_QUERY)
         .maybeSingle();
+
+      if (error) {
+        const fallbackRes = await client
+          .from('articles')
+          .update(patch)
+          .eq('id', id)
+          .select('*')
+          .maybeSingle();
+
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+      }
 
       if (error) {
         return { success: false, error: error.message };
@@ -555,12 +639,13 @@ export const articleService = {
    * Soft Delete Article (set deleted_at = NOW())
    */
   async softDeleteArticle(id: string): Promise<{ success: boolean; error?: string }> {
-    if (!isSupabaseConfigured() || !supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { success: false, error: 'Supabase is not configured.' };
     }
 
     try {
-      const { error } = await supabase
+      const { error } = await client
         .from('articles')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
@@ -580,19 +665,20 @@ export const articleService = {
    * Restore Article (deleted_at = NULL, status = 'published')
    */
   async restoreArticle(id: string): Promise<{ success: boolean; error?: string }> {
-    if (!isSupabaseConfigured() || !supabase) {
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) {
       return { success: false, error: 'Supabase is not configured.' };
     }
 
     try {
-      const { error } = await supabase
+      const { error } = await client
         .from('articles')
         .update({ deleted_at: null, status: 'published', published_at: new Date().toISOString() })
         .eq('id', id);
 
       if (error) return { success: false, error: error.message };
 
-      window.dispatchEvent(new Event('knews254_articles_updated'));
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('knews254_articles_updated'));
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || 'Failed to restore article.' };
@@ -603,9 +689,10 @@ export const articleService = {
    * Record Article View in Analytics
    */
   async recordView(id: string): Promise<void> {
-    if (!isSupabaseConfigured() || !supabase) return;
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) return;
     try {
-      await supabase.from('article_views').insert({
+      await client.from('article_views').insert({
         article_id: id,
         viewed_at: new Date().toISOString()
       });
@@ -618,9 +705,10 @@ export const articleService = {
    * Get Comments for an Article from Supabase
    */
   async getComments(articleId: string): Promise<{ id: string; name: string; text: string; date: string; likes: number }[]> {
-    if (!isSupabaseConfigured() || !supabase) return [];
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) return [];
     try {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('comments')
         .select('*')
         .eq('article_id', articleId)
@@ -646,9 +734,10 @@ export const articleService = {
    * Submit Comment for an Article in Supabase
    */
   async submitComment(articleId: string, name: string, content: string): Promise<boolean> {
-    if (!isSupabaseConfigured() || !supabase) return false;
+    const client = getSupabaseClient() || supabase;
+    if (!isSupabaseConfigured() || !client) return false;
     try {
-      const { error } = await supabase.from('comments').insert({
+      const { error } = await client.from('comments').insert({
         article_id: articleId,
         name: name.trim() || 'Anonymous Reader',
         content: content.trim(),

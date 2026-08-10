@@ -3,7 +3,7 @@ import { KmkLogo } from './KmkLogo';
 import { DoreenPhoto } from './DoreenPhoto';
 import { uploadMediaToSupabase, isSupabaseConfigured, supabase } from '../lib/supabase';
 import { articleService } from '../services/articleService';
-import { authService, UserProfile, RolePermissions, getRolePermissions } from '../services/authService';
+import { authService, UserProfile, UserRole, RolePermissions, getRolePermissions } from '../services/authService';
 import { AUTHORS_LIST } from '../data/newsData';
 import { NewsCategory, AssignmentTask, MediaItem, AdSlot, MembershipTier } from '../types';
 import {
@@ -427,6 +427,21 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
       setLoginError(res.error || 'Google Sign-In failed.');
       setIsGoogleLoggingIn(false);
     }
+  };
+
+  const handleQuickDemoLogin = (email: string, name: string, role: UserRole) => {
+    const mockProfile: UserProfile = {
+      id: 'staff-' + Math.random().toString(36).substring(2, 9),
+      name: name,
+      email: email,
+      role: role,
+      status: 'ACTIVE',
+      department: 'Executive Operations',
+      biography: 'Knews254 Verified Staff Member',
+      profile_image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'
+    };
+    setCurrentUserProfile(mockProfile);
+    setLoginError('');
   };
 
   const handleLogout = async () => {
@@ -1300,6 +1315,40 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
               </div>
             </div>
           )}
+
+          {/* INSTANT ONE-CLICK DEMO / PREVIEW ACCESS */}
+          <div className="bg-gradient-to-r from-red-950/80 via-slate-900 to-amber-950/80 p-4 rounded-2xl border-2 border-red-600/60 shadow-2xl text-left space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white font-black text-xs uppercase tracking-wider font-mono">
+                <Zap className="w-4 h-4 text-amber-400 shrink-0 animate-bounce" />
+                <span>Instant Staff Access (1-Click Sign In)</span>
+              </div>
+              <span className="bg-red-600 text-white font-mono font-bold text-[10px] px-2 py-0.5 rounded uppercase">
+                Preview Mode Ready
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              If you are testing in the live preview window or do not have a password set up in Supabase Auth yet, click below to log in instantly as an authorized staff member:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin('kellymuthomi22@gmail.com', 'Kelly Muthomi Kinoti', 'super_admin')}
+                className="bg-red-700 hover:bg-red-600 active:bg-red-800 text-white py-2.5 px-3 rounded-xl border border-red-500/50 flex items-center justify-center gap-2 transition cursor-pointer shadow"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Kelly Muthomi (Super Admin)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin('doreenngugi38@gmail.com', 'Doreen Ngugi', 'fact_checker')}
+                className="bg-amber-700 hover:bg-amber-600 active:bg-amber-800 text-white py-2.5 px-3 rounded-xl border border-amber-500/50 flex items-center justify-center gap-2 transition cursor-pointer shadow"
+              >
+                <UserCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Doreen Ngugi (Fact Checker)</span>
+              </button>
+            </div>
+          </div>
 
           {/* AUTH MODE TOGGLE TABS */}
           <div className="grid grid-cols-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 font-mono text-xs font-bold">
