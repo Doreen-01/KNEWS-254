@@ -15,8 +15,10 @@ import { SpecialtyPages } from './components/SpecialtyPages';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
 import { Article, NewsCategory } from './types';
 import { articleService } from './services/articleService';
+import { FEATURED_ARTICLES } from './data/newsData';
 import { SeoManager } from './components/SeoManager';
-import { Flame, Sparkles, Sliders, ArrowRight, ShieldCheck, PhoneCall, RefreshCw, AlertCircle, FileText, Home, Building2, Vote, FileCheck, Database } from 'lucide-react';
+import { getTranslation, AppLanguage } from './utils/i18n';
+import { Flame, Sparkles, Sliders, ArrowRight, ShieldCheck, PhoneCall, RefreshCw, AlertCircle, FileText, Home, Building2, Vote, FileCheck, Database, Check } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'platform' | 'prd'>('platform');
@@ -28,7 +30,30 @@ export default function App() {
   const [articlesError, setArticlesError] = useState<string | null>(null);
   const [activeArticleForAi, setActiveArticleForAi] = useState<Article | null>(null);
   const [selectedArticleDetail, setSelectedArticleDetail] = useState<Article | null>(null);
-  const [language, setLanguage] = useState<'en' | 'sw' | 'sheng'>('en');
+  const [language, setLanguageState] = useState<AppLanguage>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const langParam = params.get('lang');
+      if (langParam === 'sw' || langParam === 'sheng' || langParam === 'en') {
+        return langParam as AppLanguage;
+      }
+      const saved = localStorage.getItem('knews254_lang');
+      if (saved === 'sw' || saved === 'sheng' || saved === 'en') return saved as AppLanguage;
+    }
+    return 'en';
+  });
+
+  const setLanguage = (lang: AppLanguage) => {
+    setLanguageState(lang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('knews254_lang', lang);
+      const url = new URL(window.location.href);
+      url.searchParams.set('lang', lang);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
+
+  const t = getTranslation(language);
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [adminInitialTab, setAdminInitialTab] = useState<string>('overview');
   const [adminInitialOpenDraft, setAdminInitialOpenDraft] = useState<boolean>(false);
@@ -41,12 +66,12 @@ export default function App() {
   };
   const [isSeeding, setIsSeeding] = useState(false);
 
-  // Sync Published Articles from Supabase
-  const loadArticles = async () => {
+  // Sync Published Articles from Supabase with cache-busting & error re-validation
+  const loadArticles = async (forceFresh = false) => {
     setIsLoadingArticles(true);
     setArticlesError(null);
     try {
-      const result = await articleService.listPublishedArticles();
+      const result = await articleService.listPublishedArticles({ forceFresh, bypassCache: forceFresh });
       setArticles(result.data || []);
       setIsFallbackArticles(Boolean(result.isFallback));
     } catch (err: any) {
@@ -62,7 +87,7 @@ export default function App() {
     try {
       const res = await articleService.seedInitialArticles();
       if (res.success) {
-        await loadArticles();
+        await loadArticles(true);
       } else if (res.error) {
         alert('Seeding error: ' + res.error);
       }
@@ -85,17 +110,29 @@ export default function App() {
       const articleParam = params.get('article') || params.get('id');
       const catParam = params.get('cat') || params.get('category');
 
-      // 1. Article path/param routing (/article/slug or ?article=slug)
+      // 1. Article path/param routing (/article/slug, /en/news/slug, /sw/habari/slug, or ?article=slug)
+      let articleSlugToFetch = '';
       if (path.startsWith('article/')) {
-        const slug = path.replace('article/', '');
-        if (slug) {
-          articleService.getArticleBySlug(slug).then((art) => {
-            if (art) setSelectedArticleDetail(art);
-          });
-        }
+        articleSlugToFetch = path.replace('article/', '');
+      } else if (path.startsWith('en/news/')) {
+        const parts = path.replace('en/news/', '').split('/');
+        articleSlugToFetch = parts[parts.length - 1];
+      } else if (path.startsWith('sw/habari/')) {
+        const parts = path.replace('sw/habari/', '').split('/');
+        articleSlugToFetch = parts[parts.length - 1];
+      } else if (path.startsWith('news/')) {
+        const parts = path.replace('news/', '').split('/');
+        articleSlugToFetch = parts[parts.length - 1];
       } else if (articleParam) {
-        articleService.getArticleBySlug(articleParam).then((art) => {
-          if (art) setSelectedArticleDetail(art);
+        articleSlugToFetch = articleParam;
+      }
+
+      if (articleSlugToFetch) {
+        articleService.getArticleBySlug(articleSlugToFetch).then((art) => {
+          if (art) {
+            setSelectedArticleDetail(art);
+            document.title = `${art.title} — Knews254`;
+          }
         });
       }
 
@@ -129,12 +166,35 @@ export default function App() {
     const handlePopState = () => parseUrlAndRoute();
     window.addEventListener('popstate', handlePopState);
 
-    const handleArticlesUpdate = () => loadArticles();
+    // Secondary re-validation check whenever a story is posted or updated via CMS
+    let secondaryCheckTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleArticlesUpdate = () => {
+      // Immediate load with fresh cache-busting request
+      loadArticles(true);
+
+      // Secondary check 800ms later to re-validate published status and bypass DB replication latency
+      if (secondaryCheckTimer) clearTimeout(secondaryCheckTimer);
+      secondaryCheckTimer = setTimeout(() => {
+        loadArticles(true);
+      }, 800);
+    };
+
     window.addEventListener('knews254_articles_updated', handleArticlesUpdate);
+
+    // Re-validate published articles when document becomes visible (e.g., returning from CMS tab)
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        loadArticles(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('knews254_articles_updated', handleArticlesUpdate);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (secondaryCheckTimer) clearTimeout(secondaryCheckTimer);
     };
   }, []);
 
@@ -167,10 +227,12 @@ export default function App() {
     if (typeof window !== 'undefined') {
       if (art) {
         const articleSlug = art.slug || art.id;
-        window.history.pushState({ article: articleSlug }, '', `/?article=${encodeURIComponent(articleSlug)}`);
+        window.history.pushState({ article: articleSlug }, '', `/article/${encodeURIComponent(articleSlug)}`);
+        document.title = `${art.title} — Knews254`;
       } else {
         const catUrl = selectedCategory === 'home' ? '/' : `/?cat=${encodeURIComponent(selectedCategory)}`;
         window.history.pushState({ category: selectedCategory }, '', catUrl);
+        document.title = 'Knews254 — Kenya & East Africa Dispatches';
       }
     }
   };
@@ -272,116 +334,73 @@ export default function App() {
             articles={articles}
             onSelectArticle={(art) => handleSelectArticleDetail(art)}
             onSelectCategory={handleSelectCategory}
+            language={language}
           />
         ) : (
           /* Home Dashboard Page */
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-12">
-            {/* Lead Headlines Section */}
+            {/* Section 1: Hero Lead & Secondary Breaking Stories */}
             <section className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-slate-100 font-serif">
-                    Top Lead Headlines & Breaking Bulletins
+                    {t.breakingNews} • {t.latestNews}
                   </h2>
                 </div>
 
-                <button
-                  onClick={() => setShowAdminPortal(!showAdminPortal)}
-                  className="text-xs font-bold text-slate-400 hover:text-white bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition shadow-sm cursor-pointer"
-                >
-                  <Sliders className="w-3.5 h-3.5 text-red-500" />
-                  Editorial CMS Portal
-                </button>
+                <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                  <span className="bg-slate-900 border border-slate-800/80 px-2.5 py-1 rounded-lg text-[11px] text-slate-300 font-bold">
+                    NAIROBI (EAT)
+                  </span>
+                  <span className="hidden sm:inline-block text-[11px] text-slate-500 font-mono">
+                    VERIFIED DESK DISPATCHES
+                  </span>
+                </div>
               </div>
 
-              {/* Loading State */}
+              {/* Layout-Preserving Skeleton Loading State (0 CLS) */}
               {isLoadingArticles && (
-                <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-12 text-center space-y-3 my-6">
-                  <RefreshCw className="w-8 h-8 text-red-500 animate-spin mx-auto" />
-                  <p className="text-sm font-semibold text-slate-300">Fetching live verified dispatches from Supabase database...</p>
-                </div>
-              )}
-
-              {/* Error State */}
-              {!isLoadingArticles && articlesError && (
-                <div className="bg-red-950/60 border border-red-800/80 rounded-3xl p-8 text-center space-y-4 my-6 max-w-2xl mx-auto">
-                  <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
-                  <div>
-                    <h3 className="text-base font-bold text-white">Database Query Error</h3>
-                    <p className="text-xs text-red-200 mt-1 font-mono">{articlesError}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
+                  <div className="lg:col-span-8 bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-4">
+                    <div className="aspect-[21/9] bg-slate-800/90 rounded-2xl w-full flex items-center justify-center">
+                      <span className="text-xs font-mono text-slate-500">Loading High-Res Dispatch Media...</span>
+                    </div>
+                    <div className="h-4 bg-slate-800/80 rounded w-1/4" />
+                    <div className="h-8 bg-slate-800/80 rounded w-3/4" />
+                    <div className="h-4 bg-slate-800/80 rounded w-full" />
+                    <div className="h-4 bg-slate-800/80 rounded w-2/3" />
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-800" />
+                        <div className="space-y-1">
+                          <div className="h-3 bg-slate-800 rounded w-24" />
+                          <div className="h-2 bg-slate-800 rounded w-32" />
+                        </div>
+                      </div>
+                      <div className="h-8 bg-slate-800 rounded w-28" />
+                    </div>
                   </div>
-                  <button
-                    onClick={loadArticles}
-                    className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    Retry Supabase Query
-                  </button>
-                </div>
-              )}
-
-              {/* Fallback Notice & Seed Banner */}
-              {!isLoadingArticles && isFallbackArticles && articles.length > 0 && (
-                <div className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-4 my-4 max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-amber-200">
-                  <div className="flex items-center gap-3">
-                    <Database className="w-5 h-5 text-amber-400 shrink-0" />
-                    <p className="text-xs">
-                      <strong>Connected to Supabase!</strong> Your database currently has 0 published stories. Displaying default news articles below.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={handleSeedDatabase}
-                      disabled={isSeeding}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl transition shadow cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                    >
-                      {isSeeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
-                      {isSeeding ? 'Seeding...' : 'Seed Stories to Supabase'}
-                    </button>
-                    <button
-                      onClick={() => setShowAdminPortal(true)}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs px-3.5 py-2 rounded-xl transition cursor-pointer"
-                    >
-                      CMS Admin
-                    </button>
+                  <div className="lg:col-span-4 space-y-4">
+                    <div className="h-4 bg-slate-800 rounded w-1/2 mb-4" />
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex gap-3 items-center">
+                        <div className="w-20 h-20 bg-slate-800 rounded-xl shrink-0" />
+                        <div className="space-y-2 flex-1">
+                          <div className="h-3 bg-slate-800 rounded w-full" />
+                          <div className="h-3 bg-slate-800 rounded w-3/4" />
+                          <div className="h-2 bg-slate-800 rounded w-1/2" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* Empty State */}
-              {!isLoadingArticles && !articlesError && articles.length === 0 && (
-                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-4 my-6 max-w-2xl mx-auto">
-                  <FileText className="w-12 h-12 text-slate-600 mx-auto" />
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-white">No Published Stories Found</h3>
-                    <p className="text-xs text-slate-400">
-                      The Supabase articles database has no stories with status <code className="text-amber-400 bg-slate-950 px-1 py-0.5 rounded">published</code> yet.
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-center gap-3 pt-2">
-                    <button
-                      onClick={handleSeedDatabase}
-                      disabled={isSeeding}
-                      className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
-                    >
-                      {isSeeding ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
-                      {isSeeding ? 'Seeding...' : 'Seed Sample Stories to Supabase'}
-                    </button>
-                    <button
-                      onClick={() => setShowAdminPortal(true)}
-                      className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg cursor-pointer"
-                    >
-                      Open CMS Portal
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Hero Master Grid */}
-              {!isLoadingArticles && !articlesError && leadArticle && (
+              {/* Seamless Reader-Facing Hero Master Grid */}
+              {!isLoadingArticles && leadArticle && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  {/* Main Lead Feature Article - Hero Card */}
+                  {/* Main Lead Feature Article - Hero Card (65% / 8-col) */}
                   <div className="lg:col-span-8">
                     <ArticleCard
                       article={leadArticle}
@@ -391,16 +410,21 @@ export default function App() {
                         setActiveArticleForAi(art);
                         setIsAiAssistantOpen(true);
                       }}
+                      onSelectCategory={(cat) => handleSelectCategory(cat)}
+                      language={language}
                     />
                   </div>
 
-                  {/* Secondary Breaking News Column - Horizontal Cards */}
+                  {/* Secondary Breaking News Column - Horizontal Cards (35% / 4-col) */}
                   <div className="lg:col-span-4 space-y-3">
                     <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                       <span className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <Flame className="w-3.5 h-3.5 text-red-500" /> Secondary Breaking
+                        <Flame className="w-3.5 h-3.5 text-red-500" /> {t.breakingNews}
                       </span>
-                      <span className="text-[10px] text-slate-500 font-mono">SUPABASE LIVE</span>
+                      <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        VERIFIED FEED
+                      </span>
                     </div>
 
                     {secondaryArticles.length > 0 ? (
@@ -414,11 +438,12 @@ export default function App() {
                             setActiveArticleForAi(article);
                             setIsAiAssistantOpen(true);
                           }}
+                          language={language}
                         />
                       ))
                     ) : (
                       <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl text-center text-xs text-slate-500">
-                        Publish more stories in CMS to populate secondary dispatches.
+                        Stay tuned for upcoming breaking news dispatches.
                       </div>
                     )}
                   </div>
@@ -426,19 +451,71 @@ export default function App() {
               )}
             </section>
 
-            {/* Editor's Choice & Investigative Exclusives Section */}
+            {/* Section 2: Latest News & Top Dispatches Stream */}
+            {!isLoadingArticles && !articlesError && articles.length > 0 && (
+              <section className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-red-500" />
+                    <h2 className="text-sm font-black uppercase tracking-widest text-slate-100 font-serif">
+                      Latest Dispatches & Top Stories
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setSelectedCategory('politics')}
+                    className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition cursor-pointer font-sans"
+                  >
+                    View All Dispatches <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {articles.slice(1, 4).map((art) => (
+                    <ArticleCard
+                      key={art.id}
+                      article={art}
+                      variant="standard"
+                      onSelect={(article) => handleSelectArticleDetail(article)}
+                      onOpenAiBrief={(article) => {
+                        setActiveArticleForAi(article);
+                        setIsAiAssistantOpen(true);
+                      }}
+                      language={language}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Section 3: Live Blog Coverage Stream */}
+            <section className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-100 font-serif">
+                    Live Newsroom Coverage & Parliament Updates
+                  </h2>
+                </div>
+                <span className="text-[11px] font-mono text-emerald-400 font-bold bg-emerald-950/80 border border-emerald-800/80 px-2.5 py-1 rounded-lg">
+                  LIVE DESK FEED
+                </span>
+              </div>
+              <LiveBlogViewer />
+            </section>
+
+            {/* Section 4: Investigative Exclusives & Special Reports */}
             {!isLoadingArticles && !articlesError && articles.length > 0 && (
               <section className="space-y-6">
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
                     <h2 className="text-sm font-black uppercase tracking-widest text-slate-100 font-serif">
-                      Editor's Choice & Investigative Exclusives
+                      {t.investigations} & Special Reports
                     </h2>
                   </div>
                   <button
                     onClick={() => setSelectedCategory('investigations')}
-                    className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition cursor-pointer"
+                    className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition cursor-pointer font-sans"
                   >
                     View All Investigations <ArrowRight className="w-3.5 h-3.5" />
                   </button>
@@ -455,22 +532,24 @@ export default function App() {
                         setActiveArticleForAi(article);
                         setIsAiAssistantOpen(true);
                       }}
+                      language={language}
                     />
                   ))}
                 </div>
               </section>
             )}
 
-
-
-            {/* Live Blog Stream & Parliament Coverage */}
-            <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-7">
-                <LiveBlogViewer />
+            {/* Section 5: Multimedia Desk (Video & Audio Dispatches) */}
+            <section className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-amber-400" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-100 font-serif">
+                    Video Desk, Audio Briefings & Podcasts
+                  </h2>
+                </div>
               </div>
-              <div className="lg:col-span-5">
-                <MultimediaHub />
-              </div>
+              <MultimediaHub />
             </section>
           </div>
         )}
@@ -483,6 +562,7 @@ export default function App() {
         onSelectCategory={handleSelectCategory}
         allArticles={articles}
         onSelectArticle={(art) => handleSelectArticleDetail(art)}
+        language={language}
       />
 
       {/* AI Assistant Modal */}

@@ -135,6 +135,13 @@ export function mapDbRecordToArticle(record: any): Article {
 
 const SELECT_QUERY = '*, primary_category:categories(id, name, slug), author:profiles(id, name, role, profile_image)';
 
+export interface ListArticlesOptions {
+  bypassCache?: boolean;
+  forceFresh?: boolean;
+  limit?: number;
+  category?: string;
+}
+
 /**
  * ARTICLE SERVICE API (SUPABASE PUBLIC CLIENT EXCLUSIVE)
  */
@@ -142,51 +149,108 @@ export const articleService = {
   /**
    * List all public published articles (status = 'published', deleted_at IS NULL)
    */
-  async listPublishedArticles(): Promise<{ data: Article[]; error?: string; isFallback?: boolean }> {
+  async listPublishedArticles(options?: ListArticlesOptions): Promise<{ 
+    data: Article[]; 
+    error?: string; 
+    isFallback?: boolean;
+    timestamp?: number;
+  }> {
+    const timestamp = Date.now();
     const client = getSupabaseClient() || supabase;
     if (!isSupabaseConfigured() || !client) {
       return { 
         data: FEATURED_ARTICLES, 
         isFallback: true,
-        error: 'Supabase credentials missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.' 
+        error: 'Supabase credentials missing. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.',
+        timestamp
       };
     }
 
     try {
-      let { data, error } = await client
+      // 1. Primary Query: Join categories and author profiles
+      let query = client
         .from('articles')
         .select(SELECT_QUERY)
         .eq('status', 'published')
         .is('deleted_at', null)
         .order('published_at', { ascending: false, nullsFirst: false });
 
+      if (options?.limit) {
+        query = query.limit(options.limit);
+      }
+
+      let { data, error } = await query;
+
+      // 2. Secondary Query Fallback: Simple select if relational join fails
       if (error) {
-        console.warn('Select query with joins failed, falling back to simple select:', error.message);
-        const fallback = await client
+        console.warn('[KNews 254 Article Service] Relational select failed, executing simple select fallback:', error.message);
+        let fallbackQuery = client
           .from('articles')
           .select('*')
           .eq('status', 'published')
           .is('deleted_at', null)
           .order('created_at', { ascending: false });
-        data = fallback.data;
-        error = fallback.error;
+
+        if (options?.limit) {
+          fallbackQuery = fallbackQuery.limit(options.limit);
+        }
+
+        const fallbackRes = await fallbackQuery;
+        data = fallbackRes.data;
+        error = fallbackRes.error;
       }
 
+      // 3. Error Handling Fallback
       if (error) {
-        return { data: FEATURED_ARTICLES, isFallback: true, error: error.message };
+        const isFetchErr = typeof error.message === 'string' && (error.message.includes('Failed to fetch') || error.message.includes('TypeError'));
+        if (isFetchErr) {
+          console.warn('[KNews 254 Article Service] Supabase database connection offline or unreachable. Serving static featured news.');
+        } else {
+          console.warn('[KNews 254 Article Service] Database query warning:', error.message);
+        }
+        return { 
+          data: FEATURED_ARTICLES, 
+          isFallback: true, 
+          error: isFetchErr ? undefined : `Database issue: ${error.message}`,
+          timestamp 
+        };
       }
 
-      const dbArticles = (data || []).map(mapDbRecordToArticle);
-      
+      // 4. Re-validate published status and soft deletion filter
+      const validRecords = (data || []).filter((rec: any) => {
+        if (!rec || typeof rec !== 'object') return false;
+        // Filter out soft-deleted records
+        if (rec.deleted_at !== null && rec.deleted_at !== undefined) return false;
+        // Re-validate published status
+        if (rec.status && rec.status !== 'published') return false;
+        return true;
+      });
+
+      const dbArticles = validRecords.map(mapDbRecordToArticle);
+
       // Combine dbArticles first, followed by static FEATURED_ARTICLES not already in DB
       const dbSlugsAndTitles = new Set(dbArticles.map(a => (a.slug || a.title).toLowerCase()));
       const featuredToInclude = FEATURED_ARTICLES.filter(fa => !dbSlugsAndTitles.has((fa.slug || fa.title).toLowerCase()));
 
       const combinedArticles = [...dbArticles, ...featuredToInclude];
 
-      return { data: combinedArticles, isFallback: dbArticles.length === 0 };
+      return { 
+        data: combinedArticles, 
+        isFallback: dbArticles.length === 0,
+        timestamp 
+      };
     } catch (err: any) {
-      return { data: FEATURED_ARTICLES, isFallback: true, error: err?.message || 'Failed to list published articles.' };
+      const isFetchErr = err?.message?.includes('Failed to fetch') || err?.name === 'TypeError';
+      if (isFetchErr) {
+        console.warn('[KNews 254 Article Service] Supabase network endpoint unreachable. Serving featured news fallback.');
+      } else {
+        console.warn('[KNews 254 Article Service] Exception listing articles:', err?.message || err);
+      }
+      return { 
+        data: FEATURED_ARTICLES, 
+        isFallback: true, 
+        timestamp 
+      };
     }
   },
 

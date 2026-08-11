@@ -12,18 +12,26 @@ import {
   ShieldCheck, 
   Check, 
   ArrowUpRight, 
+  ArrowRight,
   Play, 
   MessageSquare,
   ThumbsUp,
-  Award
+  Award,
+  FileText
 } from 'lucide-react';
 import { Article } from '../types';
+import { getTranslation, AppLanguage } from '../utils/i18n';
+
+const DEFAULT_NEWS_IMAGE = 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&q=80';
+const DEFAULT_AVATAR_IMAGE = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80';
 
 interface ArticleCardProps {
   article: Article;
   variant?: 'hero' | 'standard' | 'horizontal' | 'minimal' | 'compact';
   onSelect: (article: Article) => void;
   onOpenAiBrief?: (article: Article) => void;
+  onSelectCategory?: (category: any) => void;
+  language?: AppLanguage;
 }
 
 export const ArticleCard: React.FC<ArticleCardProps> = ({
@@ -31,12 +39,16 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   variant = 'standard',
   onSelect,
   onOpenAiBrief,
+  onSelectCategory,
+  language = 'en',
 }) => {
+  const t = getTranslation((language || 'en') as AppLanguage);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [likesCount, setLikesCount] = useState(Math.floor(article.viewCount / 12));
   const [hasLiked, setHasLiked] = useState(false);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleBookmarkToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -56,14 +68,17 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const shareUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/article/${encodeURIComponent(article.slug || article.id)}`
+      : '';
     if (navigator.share) {
       navigator.share({
         title: article.title,
         text: article.summary,
-        url: window.location.href,
+        url: shareUrl,
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(shareUrl);
       setShowCopiedToast(true);
       setTimeout(() => setShowCopiedToast(false), 2000);
     }
@@ -78,126 +93,240 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   /* VARIANT 1: HERO LEAD ARTICLE CARD                                         */
   /* -------------------------------------------------------------------------- */
   if (variant === 'hero') {
+    const articleLink = `/article/${encodeURIComponent(article.slug || article.id)}`;
+    
+    // Single editorial status badge determination
+    const getEditorialStatus = () => {
+      if (article.isBreaking) return { label: 'BREAKING NEWS', bg: 'bg-red-600 text-white font-black animate-pulse' };
+      if (article.category === 'investigations') return { label: 'INVESTIGATION', bg: 'bg-purple-950 text-purple-300 border border-purple-800' };
+      if (article.category === 'opinion') return { label: 'OPINION', bg: 'bg-amber-950 text-amber-300 border border-amber-800' };
+      if (article.category === 'analysis') return { label: 'ANALYSIS', bg: 'bg-blue-950 text-blue-300 border border-blue-800' };
+      return { label: 'LATEST NEWS', bg: 'bg-slate-900 text-slate-200 border border-slate-700' };
+    };
+
+    const statusBadge = getEditorialStatus();
+
     return (
-      <div 
-        onClick={() => onSelect(article)}
-        className="group relative bg-slate-900 rounded-3xl border border-slate-800/90 overflow-hidden shadow-2xl hover:border-red-500/50 transition-all duration-500 cursor-pointer flex flex-col justify-between"
-      >
-        {/* Top Image Stage with 0-CLS Aspect Ratio */}
-        <div className="relative aspect-[16/9] md:aspect-[21/9] bg-slate-950 overflow-hidden">
-          <img 
-            src={article.imageUrl} 
-            alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition duration-700 ease-out filter brightness-[0.92]" 
-            loading="eager"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+      <article className="bg-slate-900 rounded-3xl border border-slate-800/90 overflow-hidden shadow-2xl transition-all duration-500 flex flex-col justify-between">
+        {/* Top Reliable Image Stage with Fixed Aspect Ratio (0 CLS) */}
+        <div className="relative aspect-[16/9] md:aspect-[21/9] bg-slate-950 overflow-hidden group">
+          {/* Skeleton placeholder while image loads */}
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-slate-800 animate-pulse flex items-center justify-center">
+              <span className="text-xs font-mono text-slate-500">Loading High-Res Dispatch Media...</span>
+            </div>
+          )}
+
+          <a
+            href={articleLink}
+            onClick={(e) => { e.preventDefault(); onSelect(article); }}
+            className="block w-full h-full cursor-pointer"
+          >
+            <img 
+              src={article.imageUrl || DEFAULT_NEWS_IMAGE} 
+              alt={article.title}
+              onLoad={() => setImageLoaded(true)}
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_NEWS_IMAGE;
+                setImageLoaded(true);
+              }}
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-700 ease-out filter brightness-[0.92]" 
+              loading="eager"
+            />
+          </a>
+
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent pointer-events-none" />
 
           {/* Badges Overlay */}
-          <div className="absolute top-4 left-4 flex flex-wrap gap-2 z-10">
-            {article.isBreaking && (
-              <span className="bg-red-600 text-white font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5 shadow-lg animate-pulse">
-                <Flame className="w-3.5 h-3.5" /> BREAKING NEWS
-              </span>
-            )}
+          <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2 z-10">
+            <span className={`text-[10px] font-mono px-3 py-1 rounded-full uppercase tracking-wider shadow-md flex items-center gap-1.5 ${statusBadge.bg}`}>
+              {article.isBreaking && <Flame className="w-3.5 h-3.5" />}
+              {statusBadge.label}
+            </span>
+
             <span className="bg-slate-950/90 backdrop-blur text-slate-200 text-[10px] font-mono font-bold px-3 py-1 rounded-full border border-slate-700/80 uppercase shadow-md">
               {article.category}
             </span>
-            <span className="bg-emerald-950/90 text-emerald-300 text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border border-emerald-800/80 flex items-center gap-1 shadow-md">
-              <ShieldCheck className="w-3 h-3 text-emerald-400" /> VERIFIED
-            </span>
+
+            <a
+              href="/?cat=factcheck-methodology"
+              onClick={(e) => {
+                e.preventDefault();
+                if (onSelectCategory) onSelectCategory('factcheck-methodology');
+              }}
+              className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 text-[10px] font-mono font-bold px-3 py-1 rounded-full border border-emerald-800/80 flex items-center gap-1 shadow-md transition"
+              title="Click to view Knews254 verification standard"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>VERIFIED DISPATCH</span>
+            </a>
           </div>
 
-          {/* Top Right Quick Actions */}
-          <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
-            {onOpenAiBrief && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenAiBrief(article);
-                }}
-                className="bg-slate-950/80 hover:bg-red-600 text-slate-200 hover:text-white text-xs font-bold px-3.5 py-1.5 rounded-full border border-slate-700/80 backdrop-blur transition flex items-center gap-1.5 shadow-lg"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                30-Sec AI Brief
-              </button>
-            )}
-            <button
-              onClick={handleBookmarkToggle}
-              className="p-2 bg-slate-950/80 hover:bg-slate-900 text-slate-300 hover:text-white rounded-full border border-slate-700/80 backdrop-blur transition shadow-lg"
-              title={isBookmarked ? "Saved" : "Save for later"}
-            >
-              {isBookmarked ? <BookmarkCheck className="w-4 h-4 text-emerald-400" /> : <Bookmark className="w-4 h-4" />}
-            </button>
+          {/* Image Credit & Caption Overlay */}
+          <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-300/90 font-mono bg-slate-950/80 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-800/80 z-10 pointer-events-none">
+            <p className="truncate max-w-xl text-slate-200 font-sans">
+              <strong className="font-bold text-slate-100">Caption:</strong> {article.imageCaption || 'Senator Edwin Sifuna addressing supporters during Kakamega mobilisation tour.'}
+            </p>
+            <span className="text-[10px] text-slate-400 shrink-0 font-mono">
+              Photo: Knews254 Bureau • On-Ground Dispatch
+            </span>
           </div>
 
           {/* Audio Player Strip inside Hero image if active */}
           {isPlayingAudio && (
-            <div className="absolute bottom-3 left-4 right-4 bg-slate-900/90 border border-slate-700 backdrop-blur rounded-xl p-2.5 flex items-center justify-between text-xs font-mono text-emerald-400 animate-fadeIn z-10">
+            <div className="absolute top-16 left-4 right-4 bg-slate-900/95 border border-emerald-500/60 backdrop-blur rounded-2xl p-3 flex items-center justify-between text-xs font-mono text-emerald-400 animate-fadeIn z-20 shadow-2xl">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span>Audio News AI Reader Active...</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="font-bold text-white">Audio Dispatch Reader Active</span>
+                <span className="text-slate-400 text-[11px]">({article.readTime || '4 min'})</span>
               </div>
-              <button onClick={handleAudioToggle} className="text-slate-400 hover:text-white font-bold">PAUSE</button>
+              <button 
+                onClick={handleAudioToggle} 
+                className="bg-emerald-950 border border-emerald-800 text-emerald-300 hover:text-white px-3 py-1 rounded-lg font-bold text-xs cursor-pointer"
+              >
+                PAUSE AUDIO
+              </button>
             </div>
           )}
         </div>
 
         {/* Hero Content Body */}
-        <div className="p-6 md:p-8 space-y-4">
-          <h1 className="text-2xl md:text-4xl font-black text-white leading-tight tracking-tight group-hover:text-red-400 transition font-serif">
-            {article.title}
-          </h1>
-          <p className="text-slate-300 text-sm md:text-base leading-relaxed line-clamp-3">
+        <div className="p-6 md:p-8 space-y-5">
+          {/* Main Headline */}
+          <div>
+            <a 
+              href={articleLink}
+              onClick={(e) => { e.preventDefault(); onSelect(article); }}
+              className="block group"
+            >
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight tracking-tight font-serif group-hover:text-red-400 transition-colors">
+                {article.title}
+              </h1>
+            </a>
+          </div>
+
+          {/* One-Sentence Factual Summary */}
+          <p className="text-slate-300 text-sm md:text-base leading-relaxed font-sans font-normal">
             {article.summary}
           </p>
 
-          {/* Author Credibility Bar & Interactive Micro-Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-800 text-xs text-slate-400">
-            <div className="flex items-center gap-3">
+          {/* Author, Desk & Credibility Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-800/80">
+            <a
+              href="/?cat=authors"
+              onClick={(e) => { e.preventDefault(); if (onSelectCategory) onSelectCategory('authors'); }}
+              className="flex items-center gap-3 group/author cursor-pointer"
+            >
               <img 
-                src={article.author.avatar} 
+                src={article.author.avatar || DEFAULT_AVATAR_IMAGE} 
                 alt={article.author.name} 
-                className="w-9 h-9 rounded-full object-cover border-2 border-red-500/40 shadow"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = DEFAULT_AVATAR_IMAGE;
+                }}
+                className="w-10 h-10 rounded-full object-cover border-2 border-red-500/40 shadow group-hover/author:border-red-400 transition"
               />
               <div>
                 <div className="flex items-center gap-1.5">
-                  <strong className="text-slate-100 font-bold text-xs">{article.author.name}</strong>
-                  <Award className="w-3.5 h-3.5 text-blue-400" title="Senior Verified Journalist" />
+                  <strong className="text-slate-100 font-bold text-xs group-hover/author:text-red-400 transition">{article.author.name}</strong>
+                  <Award className="w-3.5 h-3.5 text-blue-400" title="Senior Accredited Journalist" />
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono">{article.author.role} • Nairobi Newsroom</span>
+                <span className="text-[11px] text-slate-400 font-mono">{article.author.role || 'Chairman & Super Administrator'} • Politics & National Desk</span>
+              </div>
+            </a>
+
+            {/* Timestamps & Timezone */}
+            <div className="text-right text-slate-400 font-mono text-[11px] space-y-0.5">
+              <div className="flex items-center justify-end gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Published <time dateTime="2026-08-11T10:30:00+03:00">11 Aug 2026, 10:30 EAT</time></span>
+              </div>
+              <div className="text-[10px] text-slate-500">
+                Updated <time dateTime="2026-08-11T11:05:00+03:00">11 Aug 2026, 11:05 EAT</time>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
-              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-500" /> {article.readTime}</span>
-              <span>•</span>
-              <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5 text-slate-500" /> {(article.viewCount / 1000).toFixed(1)}k</span>
-              <span>•</span>
+          {/* Source & Verification Explanatory Row */}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-400 font-mono pt-2 border-t border-slate-800/50 bg-slate-950/60 p-3 rounded-2xl">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-300 font-bold">Sources:</span>
+              <span className="text-slate-400">On-Ground Newsroom Correspondents & Verified Statements</span>
+            </div>
 
-              <button 
-                onClick={handleAudioToggle} 
-                className="hover:text-white transition flex items-center gap-1 text-red-400 font-bold"
-                title="Listen to audio briefing"
+            <a
+              href="/?cat=factcheck-methodology"
+              onClick={(e) => {
+                e.preventDefault();
+                if (onSelectCategory) onSelectCategory('factcheck-methodology');
+              }}
+              className="text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 font-bold cursor-pointer transition"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>How we verify this story</span>
+            </a>
+          </div>
+
+          {/* Proper Article Actions Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Primary Action: Read Article */}
+              <a
+                href={articleLink}
+                onClick={(e) => { e.preventDefault(); onSelect(article); }}
+                className="bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition hover:scale-105 cursor-pointer font-sans uppercase tracking-wider"
               >
-                <Volume2 className="w-3.5 h-3.5" /> Listen
+                <span>Read Full Story</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+
+              {/* Listen Button */}
+              <button
+                onClick={handleAudioToggle}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 transition cursor-pointer border border-slate-700/80 font-mono"
+                aria-label="Listen to audio version"
+              >
+                <Volume2 className="w-4 h-4 text-red-400" />
+                <span>{isPlayingAudio ? 'Pause' : 'Listen'}</span>
               </button>
 
-              <button 
-                onClick={handleLikeToggle} 
-                className={`hover:text-white transition flex items-center gap-1 ${hasLiked ? 'text-emerald-400 font-bold' : ''}`}
+              {/* Subordinate 30-Sec AI Brief */}
+              {onOpenAiBrief && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenAiBrief(article);
+                  }}
+                  className="bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-bold px-3.5 py-2.5 rounded-xl border border-slate-700/80 transition flex items-center gap-1.5 cursor-pointer font-mono"
+                  aria-label="Generate 30 second AI summary"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>30-Sec AI Brief</span>
+                </button>
+              )}
+            </div>
+
+            {/* Utility Actions: Save & Share */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleBookmarkToggle}
+                className="p-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/80 transition cursor-pointer"
+                aria-label={isBookmarked ? "Story saved" : "Save story"}
+                title={isBookmarked ? "Saved" : "Save story"}
               >
-                <ThumbsUp className="w-3.5 h-3.5" /> {likesCount}
+                {isBookmarked ? <BookmarkCheck className="w-4 h-4 text-emerald-400" /> : <Bookmark className="w-4 h-4" />}
               </button>
 
-              <button 
-                onClick={handleShare} 
-                className="hover:text-white transition flex items-center gap-1 relative"
-                title="Share article"
+              <button
+                onClick={handleShare}
+                className="p-2.5 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-700/80 transition cursor-pointer relative"
+                aria-label="Share story URL"
+                title="Share story"
               >
-                <Share2 className="w-3.5 h-3.5" />
+                <Share2 className="w-4 h-4" />
                 {showCopiedToast && (
-                  <span className="absolute -top-7 right-0 bg-emerald-600 text-white font-sans text-[9px] font-bold px-2 py-0.5 rounded shadow">
+                  <span className="absolute -top-8 right-0 bg-emerald-600 text-white font-sans text-[9px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
                     Link Copied!
                   </span>
                 )}
@@ -205,7 +334,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
             </div>
           </div>
         </div>
-      </div>
+      </article>
     );
   }
 
@@ -220,8 +349,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
       >
         <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-slate-950 overflow-hidden shrink-0 relative">
           <img 
-            src={article.imageUrl} 
+            src={article.imageUrl || DEFAULT_NEWS_IMAGE} 
             alt={article.title} 
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = DEFAULT_NEWS_IMAGE;
+            }}
             className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
             loading="lazy"
           />
@@ -299,8 +432,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         {/* Aspect Ratio Image Container */}
         <div className="relative aspect-[16/10] bg-slate-950 overflow-hidden">
           <img 
-            src={article.imageUrl} 
+            src={article.imageUrl || DEFAULT_NEWS_IMAGE} 
             alt={article.title} 
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = DEFAULT_NEWS_IMAGE;
+            }}
             className="w-full h-full object-cover group-hover:scale-105 transition duration-500 filter brightness-95"
             loading="lazy"
           />
@@ -355,8 +492,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
       <div className="px-4 pb-4 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400 font-mono">
         <div className="flex items-center gap-2">
           <img 
-            src={article.author.avatar} 
+            src={article.author.avatar || DEFAULT_AVATAR_IMAGE} 
             alt={article.author.name} 
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = DEFAULT_AVATAR_IMAGE;
+            }}
             className="w-5 h-5 rounded-full object-cover border border-slate-700"
           />
           <span className="truncate max-w-[110px] text-slate-300 font-bold">{article.author.name}</span>

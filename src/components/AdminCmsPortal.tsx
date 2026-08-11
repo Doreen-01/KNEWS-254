@@ -54,6 +54,9 @@ import {
   HardDrive,
   Globe,
   User,
+  UserPlus,
+  Mail,
+  Share2,
   Image,
   Vote,
   Building,
@@ -117,7 +120,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
       id: 'staff-001',
       name: 'Kelly Muthomi Kinoti',
       email: 'kellymuthomi22@gmail.com',
-      role: 'Super Administrator (Chairman)',
+      role: 'Chairman & Super Administrator',
       department: 'Executive Governance & Engineering',
       clearanceLevel: 'LEVEL 4 SUPREME',
       isChiefAdmin: true,
@@ -291,6 +294,114 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
     localStorage.setItem('knews254_vetting_queue', JSON.stringify(updatedQueue));
 
     alert(`✓ [VETTING SUCCESS] ${cand.name} has been vetted & accredited by Executive Command! They can now log into the CMS using ${cand.email}.`);
+  };
+
+  // Staff Invitation & Access Granting State
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
+  const [copiedLinkCode, setCopiedLinkCode] = useState<string | null>(null);
+
+  const [inviteForm, setInviteForm] = useState({
+    recipientName: '',
+    recipientEmail: '',
+    role: 'Senior Field Reporter / Journalist',
+    department: 'Newsroom & Reporting Bureau',
+    clearanceLevel: 'LEVEL 3 ACCREDITED STAFF',
+    note: 'You are cordially invited by Chairman & Super Administrator Kelly Muthomi Kinoti to join Knews254 Media Group as an accredited staff member.'
+  });
+
+  const [sentInvites, setSentInvites] = useState<any[]>(() => {
+    const saved = localStorage.getItem('knews254_staff_invites');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://knews254.co.ke';
+    return [
+      {
+        id: 'inv-101',
+        code: 'INV-2026-CHAIRMAN-001',
+        link: `${origin}/cms?inviteCode=INV-2026-CHAIRMAN-001`,
+        recipientEmail: 'doreenngugi38@gmail.com',
+        recipientName: 'Doreen Ngugi Nkonge',
+        role: 'Fact Checker & Verification Specialist',
+        department: 'Fact Check Desk & Disinformation Audit',
+        clearanceLevel: 'LEVEL 3 FACT CHECKER',
+        sentAt: '2026-08-10 14:30',
+        sentBy: 'Chairman & Super Administrator',
+        status: 'ACCEPTED'
+      },
+      {
+        id: 'inv-102',
+        code: 'INV-2026-CHAIRMAN-002',
+        link: `${origin}/cms?inviteCode=INV-2026-CHAIRMAN-002`,
+        recipientEmail: 'muchuidk@gmail.com',
+        recipientName: 'Muchui Mwirigi',
+        role: 'Managing Editor & Multimedia Producer',
+        department: 'Editorial Board & Multimedia Desk',
+        clearanceLevel: 'LEVEL 3 MANAGING EDITOR',
+        sentAt: '2026-08-11 09:15',
+        sentBy: 'Chairman & Super Administrator',
+        status: 'ACCEPTED'
+      }
+    ];
+  });
+
+  const handleSendStaffInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteForm.recipientEmail.trim()) return;
+
+    const code = `INV-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://knews254.co.ke';
+    const link = `${origin}/cms?inviteCode=${code}`;
+    const timestamp = new Date().toLocaleString('en-KE', { dateStyle: 'short', timeStyle: 'short' });
+
+    const newInvite = {
+      id: `inv-${Date.now()}`,
+      code,
+      link,
+      recipientEmail: inviteForm.recipientEmail.trim().toLowerCase(),
+      recipientName: inviteForm.recipientName.trim() || inviteForm.recipientEmail.split('@')[0],
+      role: inviteForm.role,
+      department: inviteForm.department,
+      clearanceLevel: inviteForm.clearanceLevel,
+      note: inviteForm.note,
+      sentAt: timestamp,
+      sentBy: currentUserProfile?.name ? `${currentUserProfile.name} (Chairman & Super Administrator)` : 'Chairman & Super Administrator',
+      status: 'PENDING_ACCEPTANCE'
+    };
+
+    const updatedInvites = [newInvite, ...sentInvites];
+    setSentInvites(updatedInvites);
+    localStorage.setItem('knews254_staff_invites', JSON.stringify(updatedInvites));
+
+    setInviteSuccessMsg(`✓ Official Staff Invitation created for ${newInvite.recipientEmail}! Invite link and credentials generated.`);
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).catch(() => {});
+    }
+  };
+
+  const handleCopyInviteLink = (code: string, link: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link);
+      setCopiedLinkCode(code);
+      setTimeout(() => setCopiedLinkCode(null), 3000);
+    }
+  };
+
+  const handleRevokeInvite = (invId: string) => {
+    const updated = sentInvites.map(i => i.id === invId ? { ...i, status: 'REVOKED' } : i);
+    setSentInvites(updated);
+    localStorage.setItem('knews254_staff_invites', JSON.stringify(updated));
+  };
+
+  const handleResendInvite = (invId: string) => {
+    const inv = sentInvites.find(i => i.id === invId);
+    if (!inv) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(inv.link);
+      alert(`✓ Invitation link for ${inv.recipientEmail} re-copied to clipboard!\n\nDirect Link:\n${inv.link}`);
+    }
   };
 
   // Authenticated Supabase Session & Role Caching State
@@ -1668,6 +1779,183 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
               </div>
             </div>
           )}
+
+          {/* MODAL: SEND STAFF INVITATION & ACCESS CODE */}
+          {showInviteModal && (
+            <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl max-w-lg w-full p-6 space-y-5 relative text-slate-100 shadow-2xl">
+                <button
+                  onClick={() => { setShowInviteModal(false); setInviteSuccessMsg(''); }}
+                  className="absolute top-5 right-5 text-slate-400 hover:text-white font-bold text-lg cursor-pointer"
+                >
+                  ✕
+                </button>
+
+                <div className="border-b border-slate-800 pb-3">
+                  <div className="inline-flex items-center gap-1.5 bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-2">
+                    <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+                    EXECUTIVE STAFF INVITATION & ACCESS GATEWAY
+                  </div>
+                  <h3 className="text-xl font-black text-white font-serif">Invite Staff Member or Journalist</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Generate an official Knews254 invitation link authorized by Chairman & Super Administrator <strong className="text-slate-200">Kelly Muthomi Kinoti</strong>.
+                  </p>
+                </div>
+
+                {inviteSuccessMsg ? (
+                  <div className="bg-emerald-950/90 border-2 border-emerald-500 p-4 rounded-2xl text-xs space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-extrabold text-white text-sm">Staff Invitation Generated!</h4>
+                        <p className="text-emerald-200 text-[11px] mt-0.5">{inviteSuccessMsg}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                      <span className="text-[10px] text-slate-400 font-mono uppercase block font-bold">Direct Access Link:</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={sentInvites[0]?.link || ''}
+                          className="w-full bg-slate-900 border border-slate-700 text-emerald-300 font-mono text-[11px] px-3 py-2 rounded-lg focus:outline-none"
+                        />
+                        <button
+                          onClick={() => handleCopyInviteLink(sentInvites[0]?.code, sentInvites[0]?.link)}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-2 rounded-lg text-xs font-mono shrink-0 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          {copiedLinkCode === sentInvites[0]?.code ? '✓ Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        onClick={() => setInviteSuccessMsg('')}
+                        className="bg-slate-900 hover:bg-slate-800 text-slate-200 px-4 py-2 rounded-xl text-xs font-bold font-mono cursor-pointer"
+                      >
+                        Send Another Invite
+                      </button>
+                      <button
+                        onClick={() => { setShowInviteModal(false); setInviteSuccessMsg(''); }}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold font-mono cursor-pointer"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSendStaffInvite} className="space-y-4 text-left">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Recipient Name (Optional)</label>
+                      <input
+                        type="text"
+                        value={inviteForm.recipientName}
+                        onChange={e => setInviteForm({ ...inviteForm, recipientName: e.target.value })}
+                        placeholder="e.g. Muchui Mwirigi / Jane Wanjiku"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Recipient Email Address <span className="text-red-400">*</span></label>
+                      <input
+                        type="email"
+                        required
+                        value={inviteForm.recipientEmail}
+                        onChange={e => setInviteForm({ ...inviteForm, recipientEmail: e.target.value })}
+                        placeholder="journalist@knews254.co.ke"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">Assigned Role</label>
+                        <select
+                          value={inviteForm.role}
+                          onChange={e => setInviteForm({ ...inviteForm, role: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-medium"
+                        >
+                          <option>Super Administrator</option>
+                          <option>Managing Editor</option>
+                          <option>Editor-in-Chief</option>
+                          <option>Senior Field Reporter / Journalist</option>
+                          <option>Podcast Producer & Host</option>
+                          <option>Fact Checker & Investigator</option>
+                          <option>Human Resources Manager</option>
+                          <option>Advertising Manager</option>
+                          <option>Legal Reviewer & Moderator</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-300 mb-1">Department / Bureau</label>
+                        <select
+                          value={inviteForm.department}
+                          onChange={e => setInviteForm({ ...inviteForm, department: e.target.value })}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-medium"
+                        >
+                          <option>Newsroom & Reporting Bureau</option>
+                          <option>Editorial Board & Desk</option>
+                          <option>Podcast & Multimedia Studio</option>
+                          <option>Investigative & Fact Check Desk</option>
+                          <option>Commercial Monetization & Ads</option>
+                          <option>HR & Staff Accreditation</option>
+                          <option>Legal Compliance & Moderation</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Security Clearance Level</label>
+                      <select
+                        value={inviteForm.clearanceLevel}
+                        onChange={e => setInviteForm({ ...inviteForm, clearanceLevel: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-medium font-mono"
+                      >
+                        <option>LEVEL 3 ACCREDITED STAFF</option>
+                        <option>LEVEL 3 CHIEF EDITOR</option>
+                        <option>LEVEL 3 MANAGING EDITOR</option>
+                        <option>LEVEL 3 FACT CHECKER</option>
+                        <option>LEVEL 4 SUPREME EXECUTIVE</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Executive Invitation Note</label>
+                      <textarea
+                        rows={2}
+                        value={inviteForm.note}
+                        onChange={e => setInviteForm({ ...inviteForm, note: e.target.value })}
+                        placeholder="Personal note from Executive Command..."
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => { setShowInviteModal(false); setInviteSuccessMsg(''); }}
+                        className="w-1/3 bg-slate-950 border border-slate-800 text-slate-400 font-bold text-xs py-3 rounded-xl hover:text-white cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="w-2/3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 font-mono uppercase tracking-wider cursor-pointer"
+                      >
+                        <Send className="w-4 h-4" />
+                        Send Official Invite Link
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1698,6 +1986,14 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
           >
             <PlusCircle className="w-4 h-4 text-white animate-pulse" />
             <span>Post & Publish Story</span>
+          </button>
+
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-emerald-500/40 flex items-center gap-2 font-mono uppercase tracking-wider cursor-pointer hover:scale-105 transition-all font-sans"
+          >
+            <UserPlus className="w-4 h-4 text-emerald-300 animate-pulse" />
+            <span>Send Staff Invite</span>
           </button>
 
           {/* Staff Role Switcher Card */}
@@ -1760,7 +2056,7 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                 </span>
                 {currentUser?.isChiefAdmin && (
                   <span className="bg-amber-950 text-amber-400 border border-amber-800 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase">
-                    Chairman & Founder
+                    Chairman & Super Administrator
                   </span>
                 )}
               </div>
@@ -3603,6 +3899,97 @@ export const AdminCmsPortal: React.FC<AdminCmsPortalProps> = ({
                       <strong className="text-amber-400 font-mono">Press Credentials & Bio: </strong>
                       {cand.credentialsBio}
                     </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Executive Staff Invitations & Sent Access Links Desk */}
+          <div className="bg-slate-950 p-6 rounded-3xl border-2 border-emerald-500/40 space-y-6 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase mb-2">
+                  <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+                  STAFF INVITATIONS & DIRECT ACCESS LINKS DESK
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white font-serif">
+                  Sent Team Invitations ({sentInvites.length})
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Issue direct invitation links to journalists, reporters, podcast hosts, and editors with pre-approved roles.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold px-5 py-3 rounded-2xl text-xs shadow-xl border border-emerald-500/50 flex items-center gap-2 font-mono uppercase tracking-wider cursor-pointer hover:scale-105 transition-all"
+              >
+                <UserPlus className="w-4 h-4 text-emerald-200 animate-pulse" />
+                <span>+ Send New Staff Invitation</span>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {sentInvites.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-xs font-mono">
+                  No invitations sent yet. Click "+ Send New Staff Invitation" above to invite journalists or team members.
+                </div>
+              ) : (
+                sentInvites.map((inv: any) => (
+                  <div key={inv.id} className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-lg">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-extrabold text-white text-sm">{inv.recipientName || inv.recipientEmail}</h4>
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase bg-slate-950 text-emerald-400 border-emerald-800">
+                          {inv.role}
+                        </span>
+                        <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${
+                          inv.status === 'ACCEPTED'
+                            ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                            : inv.status === 'REVOKED'
+                            ? 'bg-red-950 text-red-400 border-red-800'
+                            : 'bg-amber-950 text-amber-400 border-amber-800 animate-pulse'
+                        }`}>
+                          {inv.status === 'ACCEPTED' ? '✓ ACCEPTED & ACTIVE' : inv.status === 'REVOKED' ? 'REVOKED' : 'PENDING ACCEPTANCE'}
+                        </span>
+                      </div>
+                      <p className="text-slate-400 text-[11px] font-mono">
+                        Email: <strong className="text-slate-200">{inv.recipientEmail}</strong> • Dept: <strong className="text-slate-200">{inv.department}</strong> • Sent: {inv.sentAt}
+                      </p>
+                      <div className="flex items-center gap-2 pt-1 font-mono text-[10px] text-slate-500">
+                        <span>Invite Code: <strong className="text-emerald-400">{inv.code}</strong></span>
+                        <span>•</span>
+                        <span>Auth By: <strong className="text-slate-300">{inv.sentBy}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleCopyInviteLink(inv.code, inv.link)}
+                        className="bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold px-3 py-2 rounded-xl text-xs font-mono flex items-center gap-1.5 cursor-pointer transition"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-emerald-400" />
+                        {copiedLinkCode === inv.code ? '✓ Link Copied!' : 'Copy Link'}
+                      </button>
+
+                      <button
+                        onClick={() => handleResendInvite(inv.id)}
+                        className="bg-slate-950 hover:bg-slate-800 border border-slate-700 text-amber-400 font-bold px-3 py-2 rounded-xl text-xs font-mono flex items-center gap-1.5 cursor-pointer transition"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        Resend
+                      </button>
+
+                      {inv.status !== 'REVOKED' && (
+                        <button
+                          onClick={() => handleRevokeInvite(inv.id)}
+                          className="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-red-400 hover:text-red-300 font-bold px-3 py-2 rounded-xl text-xs font-mono cursor-pointer transition"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}

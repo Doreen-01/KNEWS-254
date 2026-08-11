@@ -366,16 +366,16 @@ export const Footer: React.FC<FooterProps> = ({
                 </li>
               )}
               {onOpenCms && (
-                <li>
-                  <button onClick={() => { scrollToTop(); onOpenCms(); }} className="hover:text-emerald-300 text-emerald-400 transition text-left flex items-center gap-1 font-bold">
-                    <Sliders className="w-3 h-3" /> Newsroom CMS
+                <li className="pt-2 border-t border-slate-800/80">
+                  <button onClick={() => { scrollToTop(); onOpenCms(); }} className="hover:text-red-400 text-slate-400 hover:underline transition text-left flex items-center gap-1.5 font-mono text-[10px]">
+                    <Lock className="w-3 h-3 text-red-500" /> Staff Portal & CMS
                   </button>
                 </li>
               )}
               {onSelectTab && (
                 <li>
-                  <button onClick={() => { scrollToTop(); onSelectTab('prd'); }} className="hover:text-cyan-300 text-cyan-400 transition text-left font-bold">
-                    System Architecture (PRD)
+                  <button onClick={() => { scrollToTop(); onSelectTab('prd'); }} className="hover:text-slate-300 text-slate-500 transition text-left font-mono text-[10px] flex items-center gap-1">
+                    <span>Internal PRD Specification</span>
                   </button>
                 </li>
               )}

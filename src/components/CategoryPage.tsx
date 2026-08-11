@@ -21,12 +21,14 @@ import { Breadcrumbs } from './Breadcrumbs';
 import { SeoHead } from './SeoHead';
 import { Sidebar } from './Sidebar';
 import { ArticleCard } from './ArticleCard';
+import { AppLanguage } from '../utils/i18n';
 
 interface CategoryPageProps {
   category: NewsCategory;
   articles: Article[];
   onSelectArticle: (article: Article) => void;
   onSelectCategory: (cat: NewsCategory) => void;
+  language?: AppLanguage;
 }
 
 export const CategoryPage: React.FC<CategoryPageProps> = ({
@@ -34,6 +36,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
   articles,
   onSelectArticle,
   onSelectCategory,
+  language = 'en',
 }) => {
   const [activeSubcategory, setActiveSubcategory] = useState<string | 'all'>('all');
   const [localSearch, setLocalSearch] = useState('');
@@ -352,6 +355,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
                 article={featuredHeroArticle}
                 variant="hero"
                 onSelect={(art) => onSelectArticle(art)}
+                language={language}
               />
             )}
 
@@ -390,6 +394,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
                       article={art}
                       variant="standard"
                       onSelect={(article) => onSelectArticle(article)}
+                      language={language}
                     />
                   ))}
                 </div>

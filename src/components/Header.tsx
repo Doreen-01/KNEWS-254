@@ -141,16 +141,11 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'home', label: 'Home' },
     { id: 'breaking', label: 'Breaking', icon: <Flame className="w-3.5 h-3.5 text-red-500 animate-pulse" />, badge: 'LIVE' },
     { id: 'latest', label: 'Latest News' },
-    { id: 'blog', label: 'Blog', icon: <PenTool className="w-3.5 h-3.5 text-amber-400" />, badge: 'POSTS' },
+    { id: 'kenya' as NewsCategory, label: 'Kenya' },
+    { id: 'east-africa' as NewsCategory, label: 'East Africa' },
     { id: 'politics', label: 'Politics' },
-    { id: 'elections', label: 'Elections 2027', icon: <Vote className="w-3.5 h-3.5 text-emerald-500" />, badge: 'HOT' },
     { id: 'business', label: 'Business' },
-    { id: 'economy', label: 'Economy' },
-    { id: 'technology', label: 'Tech & AI', icon: <Sparkles className="w-3.5 h-3.5 text-purple-400" /> },
     { id: 'sports', label: 'Sports' },
-    { id: 'county', label: 'County News', icon: <Building2 className="w-3.5 h-3.5 text-blue-500" /> },
-    { id: 'fact-checking', label: 'Fact Check', icon: <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />, badge: 'VERIFIED' },
-    { id: 'podcasts', label: 'Audio & Podcasts' },
   ];
 
   const megaMenuItems = [
@@ -376,7 +371,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="font-black text-xl sm:text-2xl md:text-3xl tracking-tight text-white group-hover:text-red-500 transition font-serif">KNEWS</span>
                 <span className="font-black text-xl sm:text-2xl md:text-3xl tracking-tight text-red-600 font-serif">254</span>
                 <span className="hidden sm:inline-block bg-slate-800 text-slate-300 font-mono text-[9px] px-1.5 py-0.5 rounded border border-slate-700 uppercase font-bold">
-                  PRO
+                  KENYA & EAST AFRICA
                 </span>
               </div>
               <div className="flex items-center gap-2 text-[9px] sm:text-[10px] uppercase font-bold tracking-wider sm:tracking-widest text-slate-400 -mt-0.5 truncate">
@@ -453,62 +448,15 @@ export const Header: React.FC<HeaderProps> = ({
             <span>WhatsApp Desk</span>
           </a>
 
-          {/* Post Article / Dispatch Button */}
-          <button
-            onClick={() => onOpenCms('editorial', true)}
-            className="hidden md:flex bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-extrabold px-3 py-2 rounded-xl text-xs transition items-center gap-1.5 shadow-md border border-red-400/40 cursor-pointer"
-            title="Post an article or news dispatch directly to Knews254"
-          >
-            <PenTool className="w-3.5 h-3.5 text-white" />
-            <span>Post News</span>
-          </button>
-
-          {/* CMS Admin Portal */}
-          <button
-            onClick={() => onOpenCms('overview', false)}
-            className="hidden sm:flex bg-slate-900 hover:bg-slate-800 text-red-400 hover:text-red-300 border border-red-500/30 px-3 py-2 rounded-xl text-xs font-bold transition items-center gap-1.5 shadow-sm cursor-pointer"
-            title="Open Editorial CMS & Infrastructure Portal"
-          >
-            <FileCheck className="w-3.5 h-3.5" />
-            <span>CMS Admin</span>
-          </button>
-
-          {/* AI Desk Assistant */}
+          {/* AI Brief Assistant */}
           <button
             onClick={onOpenAiAssistant}
-            className="hidden lg:flex items-center gap-1.5 bg-gradient-to-r from-red-600 via-amber-600 to-red-600 bg-[length:200%_auto] animate-gradient hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition shadow-lg"
-            title="Interact with AI Intelligence Newsroom Desk"
+            className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-200 hover:text-white font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-sm"
+            title="Interact with AI Newsroom Brief Assistant"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            AI News Desk
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>AI Brief Assistant</span>
           </button>
-
-          {/* Workspace View Switcher: Live Media vs Executive PRD */}
-          <div className="bg-slate-900 p-0.5 sm:p-1 rounded-xl border border-slate-800 flex items-center shadow-inner">
-            <button
-              onClick={() => setActiveTab('platform')}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition ${
-                activeTab === 'platform'
-                  ? 'bg-red-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Radio className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Live Media</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('prd')}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition ${
-                activeTab === 'prd'
-                  ? 'bg-emerald-600 text-white shadow'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Master PRD</span>
-            </button>
-          </div>
 
           {/* Mobile Navigation Drawer Trigger */}
           <button 
