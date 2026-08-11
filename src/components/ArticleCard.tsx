@@ -31,6 +31,7 @@ interface ArticleCardProps {
   onSelect: (article: Article) => void;
   onOpenAiBrief?: (article: Article) => void;
   onSelectCategory?: (category: any) => void;
+  onSelectAuthor?: (authorIdOrName: string) => void;
   language?: AppLanguage;
 }
 
@@ -40,6 +41,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   onSelect,
   onOpenAiBrief,
   onSelectCategory,
+  onSelectAuthor,
   language = 'en',
 }) => {
   const t = getTranslation((language || 'en') as AppLanguage);
@@ -214,8 +216,15 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
           {/* Author, Desk & Credibility Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-800/80">
             <a
-              href="/?cat=authors"
-              onClick={(e) => { e.preventDefault(); if (onSelectCategory) onSelectCategory('authors'); }}
+              href={`/author/${encodeURIComponent(article.author.id || article.author.name.toLowerCase().replace(/\s+/g, '-'))}`}
+              onClick={(e) => { 
+                e.preventDefault(); 
+                if (onSelectAuthor) {
+                  onSelectAuthor(article.author.id || article.author.name);
+                } else if (onSelectCategory) {
+                  onSelectCategory('authors');
+                }
+              }}
               className="flex items-center gap-3 group/author cursor-pointer"
             >
               <img 
@@ -384,7 +393,21 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
           </p>
 
           <div className="flex items-center justify-between pt-1 text-[10px] text-slate-500 font-mono">
-            <span>By {article.author.name}</span>
+            <a
+              href={`/author/${encodeURIComponent(article.author.id || article.author.name.toLowerCase().replace(/\s+/g, '-'))}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (onSelectAuthor) {
+                  onSelectAuthor(article.author.id || article.author.name);
+                } else if (onSelectCategory) {
+                  onSelectCategory('authors');
+                }
+              }}
+              className="hover:text-red-400 transition cursor-pointer font-bold"
+            >
+              By {article.author.name}
+            </a>
             <div className="flex items-center gap-2">
               <button 
                 onClick={handleBookmarkToggle} 
@@ -490,7 +513,19 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
       {/* Card Footer */}
       <div className="px-4 pb-4 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400 font-mono">
-        <div className="flex items-center gap-2">
+        <a
+          href={`/author/${encodeURIComponent(article.author.id || article.author.name.toLowerCase().replace(/\s+/g, '-'))}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (onSelectAuthor) {
+              onSelectAuthor(article.author.id || article.author.name);
+            } else if (onSelectCategory) {
+              onSelectCategory('authors');
+            }
+          }}
+          className="flex items-center gap-2 group/author cursor-pointer hover:opacity-80 transition"
+        >
           <img 
             src={article.author.avatar || DEFAULT_AVATAR_IMAGE} 
             alt={article.author.name} 
@@ -498,10 +533,10 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
               e.currentTarget.onerror = null;
               e.currentTarget.src = DEFAULT_AVATAR_IMAGE;
             }}
-            className="w-5 h-5 rounded-full object-cover border border-slate-700"
+            className="w-5 h-5 rounded-full object-cover border border-slate-700 group-hover/author:border-red-500 transition"
           />
-          <span className="truncate max-w-[110px] text-slate-300 font-bold">{article.author.name}</span>
-        </div>
+          <span className="truncate max-w-[110px] text-slate-300 font-bold group-hover/author:text-red-400 transition">{article.author.name}</span>
+        </a>
 
         <div className="flex items-center gap-2 text-slate-500">
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {article.readTime}</span>

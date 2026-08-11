@@ -13,9 +13,10 @@ import { Footer } from './components/Footer';
 import { CategoryPage } from './components/CategoryPage';
 import { SpecialtyPages } from './components/SpecialtyPages';
 import { ArticleDetailModal } from './components/ArticleDetailModal';
-import { Article, NewsCategory } from './types';
+import { AuthorProfilePage } from './components/AuthorProfilePage';
+import { Article, Author, NewsCategory } from './types';
 import { articleService } from './services/articleService';
-import { FEATURED_ARTICLES } from './data/newsData';
+import { FEATURED_ARTICLES, AUTHORS_LIST } from './data/newsData';
 import { SeoManager } from './components/SeoManager';
 import { getTranslation, AppLanguage } from './utils/i18n';
 import { Flame, Sparkles, Sliders, ArrowRight, ShieldCheck, PhoneCall, RefreshCw, AlertCircle, FileText, Home, Building2, Vote, FileCheck, Database, Check } from 'lucide-react';
@@ -30,6 +31,48 @@ export default function App() {
   const [articlesError, setArticlesError] = useState<string | null>(null);
   const [activeArticleForAi, setActiveArticleForAi] = useState<Article | null>(null);
   const [selectedArticleDetail, setSelectedArticleDetail] = useState<Article | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
+
+  const getOrCreateAuthor = (identifier: string, articlesList: Article[]): Author => {
+    const normalized = decodeURIComponent(identifier).toLowerCase().trim();
+    const found = AUTHORS_LIST.find((a) => 
+      a.id.toLowerCase() === normalized ||
+      a.name.toLowerCase() === normalized ||
+      a.name.toLowerCase().replace(/\s+/g, '-') === normalized
+    );
+    if (found) return found;
+
+    const matchedArticle = articlesList.find(a => 
+      a.author?.id?.toLowerCase() === normalized ||
+      a.author?.name?.toLowerCase().trim() === normalized ||
+      a.author?.name?.toLowerCase().replace(/\s+/g, '-') === normalized
+    );
+
+    if (matchedArticle && matchedArticle.author) {
+      return {
+        id: matchedArticle.author.id || `auth-${matchedArticle.author.name.toLowerCase().replace(/\s+/g, '-')}`,
+        name: matchedArticle.author.name,
+        role: matchedArticle.author.role || 'Correspondent & Senior Reporter',
+        bio: `${matchedArticle.author.name} is an accredited journalist covering Kenya and East Africa dispatches for Knews254.`,
+        avatar: matchedArticle.author.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        location: 'Nairobi HQ',
+        articlesCount: articlesList.filter(a => a.author?.name === matchedArticle.author.name).length,
+        featuredBeats: ['politics', 'investigations', 'breaking']
+      };
+    }
+
+    const displayName = decodeURIComponent(identifier).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    return {
+      id: identifier,
+      name: displayName,
+      role: 'Journalist & Staff Reporter',
+      bio: `${displayName} is an accredited journalist covering Kenya and East Africa dispatches for Knews254.`,
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+      location: 'Nairobi HQ',
+      articlesCount: 10,
+      featuredBeats: ['news', 'politics', 'general']
+    };
+  };
   const [language, setLanguageState] = useState<AppLanguage>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -110,6 +153,26 @@ export default function App() {
       const articleParam = params.get('article') || params.get('id');
       const catParam = params.get('cat') || params.get('category');
 
+      // 0. Author path/param routing (/author/slug, /en/author/slug, /sw/mwandishi/slug, or ?author=slug)
+      let authorToFetch = '';
+      if (path.startsWith('author/')) {
+        authorToFetch = path.replace('author/', '');
+      } else if (path.startsWith('en/author/')) {
+        authorToFetch = path.replace('en/author/', '');
+      } else if (path.startsWith('sw/mwandishi/')) {
+        authorToFetch = path.replace('sw/mwandishi/', '');
+      } else if (params.get('author')) {
+        authorToFetch = params.get('author')!;
+      }
+
+      if (authorToFetch) {
+        const authorObj = getOrCreateAuthor(authorToFetch, articles);
+        setSelectedAuthor(authorObj);
+        document.title = `${authorObj.name} — Author Profile | Knews254`;
+      } else {
+        setSelectedAuthor(null);
+      }
+
       // 1. Article path/param routing (/article/slug, /en/news/slug, /sw/habari/slug, or ?article=slug)
       let articleSlugToFetch = '';
       if (path.startsWith('article/')) {
@@ -151,7 +214,8 @@ export default function App() {
           'cookie-policy', 'terms-of-service', 'corrections-policy', 'ai-policy',
           'factcheck-methodology', 'anonymous-sources', 'transparency-report',
           'funding-policy', 'community-guidelines', 'takedown-policy', 'reviews',
-          'how-we-review', 'faq', 'help-center'
+          'how-we-review', 'faq', 'help-center', 'blog', 'ai', 'diaspora', 'live',
+          'videos', 'podcasts', 'editorials'
         ];
         if (validCategories.includes(path as NewsCategory)) {
           setSelectedCategory(path as NewsCategory);
@@ -214,10 +278,24 @@ export default function App() {
   const secondaryArticles = searchFilteredArticles.slice(1, 5);
 
   const handleSelectCategory = (cat: NewsCategory) => {
+    setSelectedAuthor(null);
     setSelectedCategory(cat);
     if (typeof window !== 'undefined') {
-      const newUrl = cat === 'home' ? '/' : `/?cat=${encodeURIComponent(cat)}`;
+      const newUrl = cat === 'home' ? '/' : `/${encodeURIComponent(cat)}`;
       window.history.pushState({ category: cat }, '', newUrl);
+      const catTitle = cat.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      document.title = cat === 'home' ? 'Knews254 — Kenya & East Africa Dispatches' : `${catTitle} | Knews254`;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectAuthor = (authorIdOrName: string) => {
+    const authorObj = getOrCreateAuthor(authorIdOrName, articles);
+    setSelectedAuthor(authorObj);
+    const authorSlug = authorObj.id || authorObj.name.toLowerCase().replace(/\s+/g, '-');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ author: authorSlug }, '', `/author/${encodeURIComponent(authorSlug)}`);
+      document.title = `${authorObj.name} — Author Profile | Knews254`;
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -321,12 +399,31 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 pb-16 md:pb-0">
-        {activeTab === 'prd' ? (
+        {selectedAuthor ? (
+          <AuthorProfilePage
+            author={selectedAuthor}
+            articles={articles}
+            onSelectArticle={(art) => handleSelectArticleDetail(art)}
+            onBack={() => {
+              setSelectedAuthor(null);
+              const catUrl = selectedCategory === 'home' ? '/' : `/?cat=${encodeURIComponent(selectedCategory)}`;
+              window.history.pushState({}, '', catUrl);
+              document.title = 'Knews254 — Kenya & East Africa Dispatches';
+            }}
+            onOpenAiBrief={(art) => {
+              setActiveArticleForAi(art);
+              setIsAiAssistantOpen(true);
+            }}
+            onSelectCategory={handleSelectCategory}
+            language={language}
+          />
+        ) : activeTab === 'prd' ? (
           <PrdViewer />
         ) : isSpecialtyCategory ? (
           <SpecialtyPages
             category={selectedCategory}
             onSelectCategory={handleSelectCategory}
+            onSelectAuthor={handleSelectAuthor}
           />
         ) : selectedCategory !== 'home' ? (
           <CategoryPage
@@ -334,6 +431,7 @@ export default function App() {
             articles={articles}
             onSelectArticle={(art) => handleSelectArticleDetail(art)}
             onSelectCategory={handleSelectCategory}
+            onSelectAuthor={handleSelectAuthor}
             language={language}
           />
         ) : (
@@ -411,6 +509,7 @@ export default function App() {
                         setIsAiAssistantOpen(true);
                       }}
                       onSelectCategory={(cat) => handleSelectCategory(cat)}
+                      onSelectAuthor={handleSelectAuthor}
                       language={language}
                     />
                   </div>
@@ -438,6 +537,7 @@ export default function App() {
                             setActiveArticleForAi(article);
                             setIsAiAssistantOpen(true);
                           }}
+                          onSelectAuthor={handleSelectAuthor}
                           language={language}
                         />
                       ))
@@ -480,6 +580,7 @@ export default function App() {
                         setActiveArticleForAi(article);
                         setIsAiAssistantOpen(true);
                       }}
+                      onSelectAuthor={handleSelectAuthor}
                       language={language}
                     />
                   ))}
@@ -532,6 +633,7 @@ export default function App() {
                         setActiveArticleForAi(article);
                         setIsAiAssistantOpen(true);
                       }}
+                      onSelectAuthor={handleSelectAuthor}
                       language={language}
                     />
                   ))}
@@ -562,6 +664,7 @@ export default function App() {
         onSelectCategory={handleSelectCategory}
         allArticles={articles}
         onSelectArticle={(art) => handleSelectArticleDetail(art)}
+        onSelectAuthor={handleSelectAuthor}
         language={language}
       />
 

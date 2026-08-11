@@ -28,6 +28,7 @@ interface CategoryPageProps {
   articles: Article[];
   onSelectArticle: (article: Article) => void;
   onSelectCategory: (cat: NewsCategory) => void;
+  onSelectAuthor?: (authorIdOrName: string) => void;
   language?: AppLanguage;
 }
 
@@ -36,6 +37,7 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
   articles,
   onSelectArticle,
   onSelectCategory,
+  onSelectAuthor,
   language = 'en',
 }) => {
   const [activeSubcategory, setActiveSubcategory] = useState<string | 'all'>('all');
@@ -355,6 +357,8 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
                 article={featuredHeroArticle}
                 variant="hero"
                 onSelect={(art) => onSelectArticle(art)}
+                onSelectAuthor={onSelectAuthor}
+                onSelectCategory={onSelectCategory}
                 language={language}
               />
             )}
@@ -394,6 +398,8 @@ export const CategoryPage: React.FC<CategoryPageProps> = ({
                       article={art}
                       variant="standard"
                       onSelect={(article) => onSelectArticle(article)}
+                      onSelectAuthor={onSelectAuthor}
+                      onSelectCategory={onSelectCategory}
                       language={language}
                     />
                   ))}

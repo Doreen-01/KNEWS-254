@@ -32,6 +32,7 @@ interface ArticleDetailModalProps {
   onSelectCategory: (cat: NewsCategory) => void;
   allArticles: Article[];
   onSelectArticle: (art: Article) => void;
+  onSelectAuthor?: (authorIdOrName: string) => void;
   language?: AppLanguage;
 }
 
@@ -41,6 +42,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
   onSelectCategory,
   allArticles,
   onSelectArticle,
+  onSelectAuthor,
   language = 'en',
 }) => {
   if (!article) return null;
@@ -237,17 +239,27 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-b border-slate-800/80 pb-4 text-xs text-slate-400">
               {/* Author Badge */}
-              <div className="flex items-center gap-3">
+              <a
+                href={`/author/${encodeURIComponent(article.author.id || article.author.name.toLowerCase().replace(/\s+/g, '-'))}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onSelectAuthor) {
+                    onClose();
+                    onSelectAuthor(article.author.id || article.author.name);
+                  }
+                }}
+                className="flex items-center gap-3 group/author cursor-pointer hover:opacity-90 transition"
+              >
                 <img
                   src={article.author.avatar}
                   alt={article.author.name}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-slate-700"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-slate-700 group-hover/author:border-red-500 transition"
                 />
                 <div>
-                  <h4 className="font-extrabold text-slate-200">{article.author.name}</h4>
+                  <h4 className="font-extrabold text-slate-200 group-hover/author:text-red-400 transition">{article.author.name}</h4>
                   <p className="text-[11px] text-slate-400">{article.author.role}</p>
                 </div>
-              </div>
+              </a>
 
               {/* Date & Location */}
               <div className="flex items-center gap-4 font-mono text-[11px]">

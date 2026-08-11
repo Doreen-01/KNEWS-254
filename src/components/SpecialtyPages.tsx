@@ -27,11 +27,13 @@ import { supabase } from '../lib/supabase';
 interface SpecialtyPagesProps {
   category: NewsCategory;
   onSelectCategory: (cat: NewsCategory) => void;
+  onSelectAuthor?: (authorIdOrName: string) => void;
 }
 
 export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
   category,
   onSelectCategory,
+  onSelectAuthor,
 }) => {
   // Dynamic Authors list synced with localStorage (filtering removed non-staff)
   const [authorsList, setAuthorsList] = useState<Author[]>(() => {
@@ -135,7 +137,7 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
             {authorsList.map((author) => (
               <div
                 key={author.id}
-                onClick={() => setSelectedAuthor(author)}
+                onClick={() => onSelectAuthor ? onSelectAuthor(author.id) : setSelectedAuthor(author)}
                 className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-red-500/50 transition cursor-pointer space-y-4 shadow-xl"
               >
 
