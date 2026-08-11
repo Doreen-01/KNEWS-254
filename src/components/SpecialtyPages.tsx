@@ -1111,6 +1111,56 @@ export const SpecialtyPages: React.FC<SpecialtyPagesProps> = ({
           {policy.intro}
         </p>
 
+        {/* Interactive Cookie Management Control Card for Cookie Policy Page */}
+        {category === 'cookie-policy' && (
+          <div className="bg-slate-950 border-2 border-red-500/40 rounded-2xl p-5 space-y-4 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-white font-serif flex items-center gap-2">
+                    🍪 Your Active Cookie Preferences
+                  </span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-400 font-mono font-bold px-2 py-0.5 rounded border border-emerald-800">
+                    Live Status Active
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Manage your browser storage permissions or reset consent choices at any time.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('knews254_open_cookie_modal'))}
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs transition shadow-lg flex items-center gap-1.5 cursor-pointer"
+                >
+                  Configure Cookie Preferences
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono pt-2 border-t border-slate-900">
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block">1. Essential</span>
+                <span className="text-emerald-400 font-bold block">✓ Always Active</span>
+              </div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block">2. Analytics</span>
+                <span className="text-slate-200 font-bold block">✓ Configurable</span>
+              </div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block">3. Personalization</span>
+                <span className="text-slate-200 font-bold block">✓ Configurable</span>
+              </div>
+              <div className="bg-slate-900 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                <span className="text-slate-400 text-[10px] uppercase font-bold block">4. Marketing</span>
+                <span className="text-slate-200 font-bold block">✓ Optional</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
           {policy.sections.map((sec, i) => (
             <div key={i} className="space-y-2 border-b border-slate-800/60 pb-5 last:border-0">

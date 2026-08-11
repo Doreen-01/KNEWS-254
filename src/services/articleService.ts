@@ -167,7 +167,7 @@ export const articleService = {
     }
 
     try {
-      // 1. Primary Query: Join categories and author profiles
+      // 1. Primary Query: Join categories and author profiles with a 2.5s timeout race
       let query = client
         .from('articles')
         .select(SELECT_QUERY)
@@ -179,7 +179,12 @@ export const articleService = {
         query = query.limit(options.limit);
       }
 
-      let { data, error } = await query;
+      const fetchPromise = Promise.resolve(query);
+      const timeoutPromise = new Promise<any>((resolve) => 
+        setTimeout(() => resolve({ data: null, error: { message: 'Supabase network query timeout' } }), 2500)
+      );
+
+      let { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
 
       // 2. Secondary Query Fallback: Simple select if relational join fails
       if (error) {

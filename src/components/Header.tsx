@@ -349,12 +349,14 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-6">
         {/* Newspaper Masthead Brand */}
         <div className="flex items-center gap-2 sm:gap-4 shrink-0 min-w-0">
-          <button 
-            onClick={() => {
+          <a 
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
               setActiveTab('platform');
               setSelectedCategory('home');
             }} 
-            className="flex items-center gap-2 sm:gap-3 text-left group focus:outline-none min-w-0"
+            className="flex items-center gap-2 sm:gap-3 text-left group focus:outline-none min-w-0 cursor-pointer"
           >
             {/* Kenya Flag Emblem Badge */}
             <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center relative overflow-hidden shadow-lg group-hover:border-red-500 transition shrink-0">
@@ -380,7 +382,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden lg:inline text-slate-500 font-normal">{currentDateStr}</span>
               </div>
             </div>
-          </button>
+          </a>
         </div>
 
         {/* Global Smart Search Bar with Keyboard Command Badge */}
@@ -475,13 +477,15 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-1 py-2 w-full min-w-0">
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar min-w-0 flex-1 pr-1">
               {mainCategoryItems.map((cat) => (
-                <button
+                <a
                   key={cat.id}
-                  onClick={() => {
+                  href={cat.id === 'home' ? '/' : `/${encodeURIComponent(cat.id)}`}
+                  onClick={(e) => {
+                    e.preventDefault();
                     setSelectedCategory(cat.id);
                     setActiveDropdown(null);
                   }}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition relative shrink-0 ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition relative shrink-0 cursor-pointer ${
                     selectedCategory === cat.id
                       ? 'bg-slate-950 text-red-400 border border-red-500/40 shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -494,7 +498,7 @@ export const Header: React.FC<HeaderProps> = ({
                       {cat.badge}
                     </span>
                   )}
-                </button>
+                </a>
               ))}
             </div>
 
@@ -528,19 +532,21 @@ export const Header: React.FC<HeaderProps> = ({
                     <ul className="space-y-1.5">
                       {section.items.map((item) => (
                         <li key={item.id}>
-                          <button
-                            onClick={() => {
+                          <a
+                            href={item.id === 'home' ? '/' : `/${encodeURIComponent(item.id)}`}
+                            onClick={(e) => {
+                              e.preventDefault();
                               setSelectedCategory(item.id);
                               setActiveDropdown(null);
                             }}
-                            className={`text-xs font-medium block w-full text-left py-1 px-2 rounded transition ${
+                            className={`text-xs font-medium block w-full text-left py-1 px-2 rounded transition cursor-pointer ${
                               selectedCategory === item.id
                                 ? 'text-red-400 bg-slate-900 font-bold border-l-2 border-red-500'
                                 : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
                             }`}
                           >
                             {item.label}
-                          </button>
+                          </a>
                         </li>
                       ))}
                     </ul>
@@ -619,20 +625,22 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 {section.items.map((item) => (
-                  <button
+                  <a
                     key={item.id}
-                    onClick={() => {
+                    href={item.id === 'home' ? '/' : `/${encodeURIComponent(item.id)}`}
+                    onClick={(e) => {
+                      e.preventDefault();
                       setSelectedCategory(item.id);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`text-xs text-left py-1.5 px-2 rounded-lg border border-slate-800/80 truncate ${
+                    className={`text-xs text-left py-1.5 px-2 rounded-lg border border-slate-800/80 truncate block cursor-pointer ${
                       selectedCategory === item.id
                         ? 'bg-red-600 text-white font-bold'
                         : 'bg-slate-900 text-slate-300 hover:text-white'
                     }`}
                   >
                     {item.label}
-                  </button>
+                  </a>
                 ))}
               </div>
             </div>

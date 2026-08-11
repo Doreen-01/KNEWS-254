@@ -1,19 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { ArticleCard } from './components/ArticleCard';
-import { PrdViewer } from './components/PrdViewer';
-import { ElectionCentre } from './components/ElectionCentre';
-import { CountyNewsExplorer } from './components/CountyNewsExplorer';
-import { FactCheckHub } from './components/FactCheckHub';
-import { LiveBlogViewer } from './components/LiveBlogViewer';
-import { MultimediaHub } from './components/MultimediaHub';
-import { AdminCmsPortal } from './components/AdminCmsPortal';
-import { AiNewsAssistant } from './components/AiNewsAssistant';
 import { Footer } from './components/Footer';
-import { CategoryPage } from './components/CategoryPage';
-import { SpecialtyPages } from './components/SpecialtyPages';
-import { ArticleDetailModal } from './components/ArticleDetailModal';
-import { AuthorProfilePage } from './components/AuthorProfilePage';
 import { Article, Author, NewsCategory } from './types';
 import { articleService } from './services/articleService';
 import { FEATURED_ARTICLES, AUTHORS_LIST } from './data/newsData';
@@ -21,13 +9,28 @@ import { SeoManager } from './components/SeoManager';
 import { getTranslation, AppLanguage } from './utils/i18n';
 import { Flame, Sparkles, Sliders, ArrowRight, ShieldCheck, PhoneCall, RefreshCw, AlertCircle, FileText, Home, Building2, Vote, FileCheck, Database, Check } from 'lucide-react';
 
+// Lazy-loaded components for code splitting & optimal bundle performance
+const AdminCmsPortal = lazy(() => import('./components/AdminCmsPortal').then(m => ({ default: m.AdminCmsPortal })));
+const ArticleDetailModal = lazy(() => import('./components/ArticleDetailModal').then(m => ({ default: m.ArticleDetailModal })));
+const AiNewsAssistant = lazy(() => import('./components/AiNewsAssistant').then(m => ({ default: m.AiNewsAssistant })));
+const PrdViewer = lazy(() => import('./components/PrdViewer').then(m => ({ default: m.PrdViewer })));
+const CategoryPage = lazy(() => import('./components/CategoryPage').then(m => ({ default: m.CategoryPage })));
+const SpecialtyPages = lazy(() => import('./components/SpecialtyPages').then(m => ({ default: m.SpecialtyPages })));
+const AuthorProfilePage = lazy(() => import('./components/AuthorProfilePage').then(m => ({ default: m.AuthorProfilePage })));
+const ElectionCentre = lazy(() => import('./components/ElectionCentre').then(m => ({ default: m.ElectionCentre })));
+const CountyNewsExplorer = lazy(() => import('./components/CountyNewsExplorer').then(m => ({ default: m.CountyNewsExplorer })));
+const FactCheckHub = lazy(() => import('./components/FactCheckHub').then(m => ({ default: m.FactCheckHub })));
+const LiveBlogViewer = lazy(() => import('./components/LiveBlogViewer').then(m => ({ default: m.LiveBlogViewer })));
+const MultimediaHub = lazy(() => import('./components/MultimediaHub').then(m => ({ default: m.MultimediaHub })));
+const CookieConsentBanner = lazy(() => import('./components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'platform' | 'prd'>('platform');
   const [selectedCategory, setSelectedCategory] = useState<NewsCategory>('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [isLoadingArticles, setIsLoadingArticles] = useState(true);
+  const [articles, setArticles] = useState<Article[]>(FEATURED_ARTICLES);
+  const [isLoadingArticles, setIsLoadingArticles] = useState(false);
   const [articlesError, setArticlesError] = useState<string | null>(null);
   const [activeArticleForAi, setActiveArticleForAi] = useState<Article | null>(null);
   const [selectedArticleDetail, setSelectedArticleDetail] = useState<Article | null>(null);
@@ -111,15 +114,18 @@ export default function App() {
 
   // Sync Published Articles from Supabase with cache-busting & error re-validation
   const loadArticles = async (forceFresh = false) => {
-    setIsLoadingArticles(true);
+    if (articles.length === 0) {
+      setIsLoadingArticles(true);
+    }
     setArticlesError(null);
     try {
       const result = await articleService.listPublishedArticles({ forceFresh, bypassCache: forceFresh });
-      setArticles(result.data || []);
+      if (result.data && result.data.length > 0) {
+        setArticles(result.data);
+      }
       setIsFallbackArticles(Boolean(result.isFallback));
     } catch (err: any) {
       setArticlesError(err?.message || 'Failed to load articles from Supabase.');
-      setArticles([]);
     } finally {
       setIsLoadingArticles(false);
     }
@@ -308,7 +314,7 @@ export default function App() {
         window.history.pushState({ article: articleSlug }, '', `/article/${encodeURIComponent(articleSlug)}`);
         document.title = `${art.title} — Knews254`;
       } else {
-        const catUrl = selectedCategory === 'home' ? '/' : `/?cat=${encodeURIComponent(selectedCategory)}`;
+        const catUrl = selectedCategory === 'home' ? '/' : `/${encodeURIComponent(selectedCategory)}`;
         window.history.pushState({ category: selectedCategory }, '', catUrl);
         document.title = 'Knews254 — Kenya & East Africa Dispatches';
       }
@@ -380,33 +386,46 @@ export default function App() {
                 Close CMS Portal
               </button>
             </div>
-            <AdminCmsPortal
-              initialTab={adminInitialTab}
-              initialShowDraftModal={adminInitialOpenDraft}
-              onClose={() => setShowAdminPortal(false)}
-              onNavigateCategory={(cat) => {
-                handleSelectCategory(cat);
-                setShowAdminPortal(false);
-              }}
-              onNavigateTab={(tab) => {
-                setActiveTab(tab);
-                setShowAdminPortal(false);
-              }}
-            />
+            <Suspense fallback={
+              <div className="py-20 text-center flex flex-col items-center justify-center space-y-3">
+                <RefreshCw className="w-8 h-8 text-red-500 animate-spin" />
+                <p className="text-sm font-mono text-slate-300 font-bold">Loading Knews254 Staff Portal & CMS...</p>
+              </div>
+            }>
+              <AdminCmsPortal
+                initialTab={adminInitialTab}
+                initialShowDraftModal={adminInitialOpenDraft}
+                onClose={() => setShowAdminPortal(false)}
+                onNavigateCategory={(cat) => {
+                  handleSelectCategory(cat);
+                  setShowAdminPortal(false);
+                }}
+                onNavigateTab={(tab) => {
+                  setActiveTab(tab);
+                  setShowAdminPortal(false);
+                }}
+              />
+            </Suspense>
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
       <main className="flex-1 pb-16 md:pb-0">
-        {selectedAuthor ? (
+        <Suspense fallback={
+          <div className="max-w-7xl mx-auto px-4 py-16 text-center flex flex-col items-center justify-center space-y-3">
+            <RefreshCw className="w-8 h-8 text-red-500 animate-spin" />
+            <p className="text-sm font-mono text-slate-400 font-bold">Loading Knews254 Dispatch View...</p>
+          </div>
+        }>
+          {selectedAuthor ? (
           <AuthorProfilePage
             author={selectedAuthor}
             articles={articles}
             onSelectArticle={(art) => handleSelectArticleDetail(art)}
             onBack={() => {
               setSelectedAuthor(null);
-              const catUrl = selectedCategory === 'home' ? '/' : `/?cat=${encodeURIComponent(selectedCategory)}`;
+              const catUrl = selectedCategory === 'home' ? '/' : `/${encodeURIComponent(selectedCategory)}`;
               window.history.pushState({}, '', catUrl);
               document.title = 'Knews254 — Kenya & East Africa Dispatches';
             }}
@@ -655,26 +674,60 @@ export default function App() {
             </section>
           </div>
         )}
+        </Suspense>
       </main>
 
       {/* Article Full Modal Viewer */}
-      <ArticleDetailModal
-        article={selectedArticleDetail}
-        onClose={() => handleSelectArticleDetail(null)}
-        onSelectCategory={handleSelectCategory}
-        allArticles={articles}
-        onSelectArticle={(art) => handleSelectArticleDetail(art)}
-        onSelectAuthor={handleSelectAuthor}
-        language={language}
-      />
+      <Suspense fallback={
+        selectedArticleDetail ? (
+          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4">
+            <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-6 py-4 rounded-2xl shadow-2xl">
+              <RefreshCw className="w-5 h-5 text-red-500 animate-spin" />
+              <span className="text-sm font-bold text-slate-200 font-mono">Loading Article Reader...</span>
+            </div>
+          </div>
+        ) : null
+      }>
+        <ArticleDetailModal
+          article={selectedArticleDetail}
+          onClose={() => handleSelectArticleDetail(null)}
+          onSelectCategory={handleSelectCategory}
+          allArticles={articles}
+          onSelectArticle={(art) => handleSelectArticleDetail(art)}
+          onSelectAuthor={handleSelectAuthor}
+          language={language}
+        />
+      </Suspense>
 
       {/* AI Assistant Modal */}
-      <AiNewsAssistant
-        isOpen={isAiAssistantOpen}
-        onClose={() => setIsAiAssistantOpen(false)}
-        articleTitle={activeArticleForAi?.title || leadArticle?.title || 'Knews254 Assistant'}
-        articleContent={activeArticleForAi?.content || leadArticle?.content || ''}
-      />
+      <Suspense fallback={
+        isAiAssistantOpen ? (
+          <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-xl flex items-center justify-center p-4">
+            <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-6 py-4 rounded-2xl shadow-2xl">
+              <Sparkles className="w-5 h-5 text-amber-400 animate-spin" />
+              <span className="text-sm font-bold text-slate-200 font-mono">Loading AI Desk...</span>
+            </div>
+          </div>
+        ) : null
+      }>
+        <AiNewsAssistant
+          isOpen={isAiAssistantOpen}
+          onClose={() => setIsAiAssistantOpen(false)}
+          articleTitle={activeArticleForAi?.title || leadArticle?.title || 'Knews254 Assistant'}
+          articleContent={activeArticleForAi?.content || leadArticle?.content || ''}
+        />
+      </Suspense>
+
+      {/* Cookie Consent & Preferences Management System */}
+      <Suspense fallback={null}>
+        <CookieConsentBanner
+          onNavigateToPolicy={() => {
+            setActiveTab('platform');
+            setSelectedCategory('cookie-policy');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      </Suspense>
 
       {/* Footer */}
       <Footer

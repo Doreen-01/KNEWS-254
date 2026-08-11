@@ -61,10 +61,14 @@ export const Footer: React.FC<FooterProps> = ({
   };
 
   const getCategoryHref = (category: NewsCategory) => {
-    return category === 'home' ? '/' : `/${encodeURIComponent(category)}`;
+    return category === 'home' ? '/' : `/category/${encodeURIComponent(category)}`;
   };
 
-  const navTo = (category: NewsCategory) => {
+  const handleCategoryClick = (e: React.MouseEvent<HTMLAnchorElement>, category: NewsCategory) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) {
+      return;
+    }
+    e.preventDefault();
     scrollToTop();
     if (onSelectCategory) {
       onSelectCategory(category);
@@ -269,57 +273,57 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-slate-400">
               <li>
-                <a href={getCategoryHref('blog')} onClick={(e) => { e.preventDefault(); navTo('blog'); }} className="hover:text-amber-400 font-bold text-amber-400 transition text-left flex items-center gap-1 cursor-pointer">
+                <a href={getCategoryHref('blog')} onClick={(e) => handleCategoryClick(e, 'blog')} className="hover:text-amber-400 font-bold text-amber-400 transition text-left flex items-center gap-1 cursor-pointer">
                   Knews254 Blog
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('breaking')} onClick={(e) => { e.preventDefault(); navTo('breaking'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('breaking')} onClick={(e) => handleCategoryClick(e, 'breaking')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Breaking News
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('politics')} onClick={(e) => { e.preventDefault(); navTo('politics'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('politics')} onClick={(e) => handleCategoryClick(e, 'politics')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Politics & Parliament
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('elections')} onClick={(e) => { e.preventDefault(); navTo('elections'); }} className="hover:text-red-400 font-bold text-red-400 transition text-left flex items-center gap-1 cursor-pointer">
+                <a href={getCategoryHref('elections')} onClick={(e) => handleCategoryClick(e, 'elections')} className="hover:text-red-400 font-bold text-red-400 transition text-left flex items-center gap-1 cursor-pointer">
                   2027 Election Centre
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('business')} onClick={(e) => { e.preventDefault(); navTo('business'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('business')} onClick={(e) => handleCategoryClick(e, 'business')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Business & Markets
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('technology')} onClick={(e) => { e.preventDefault(); navTo('technology'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('technology')} onClick={(e) => handleCategoryClick(e, 'technology')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Silicon Savannah Tech
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('ai')} onClick={(e) => { e.preventDefault(); navTo('ai'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('ai')} onClick={(e) => handleCategoryClick(e, 'ai')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Kenya AI & Innovation
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('sports')} onClick={(e) => { e.preventDefault(); navTo('sports'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('sports')} onClick={(e) => handleCategoryClick(e, 'sports')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Sports & Athletics
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('county')} onClick={(e) => { e.preventDefault(); navTo('county'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('county')} onClick={(e) => handleCategoryClick(e, 'county')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   47 Counties Hub
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('investigations')} onClick={(e) => { e.preventDefault(); navTo('investigations'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('investigations')} onClick={(e) => handleCategoryClick(e, 'investigations')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Investigative Desk
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('diaspora')} onClick={(e) => { e.preventDefault(); navTo('diaspora'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('diaspora')} onClick={(e) => handleCategoryClick(e, 'diaspora')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Global Diaspora
                 </a>
               </li>
@@ -333,32 +337,32 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-slate-400">
               <li>
-                <a href={getCategoryHref('live')} onClick={(e) => { e.preventDefault(); navTo('live'); }} className="hover:text-red-400 transition text-left flex items-center gap-1 text-emerald-400 font-bold cursor-pointer">
+                <a href={getCategoryHref('live')} onClick={(e) => handleCategoryClick(e, 'live')} className="hover:text-red-400 transition text-left flex items-center gap-1 text-emerald-400 font-bold cursor-pointer">
                   <Radio className="w-3 h-3 animate-pulse" /> Live TV & Radio
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('videos')} onClick={(e) => { e.preventDefault(); navTo('videos'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('videos')} onClick={(e) => handleCategoryClick(e, 'videos')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Video Bulletins
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('podcasts')} onClick={(e) => { e.preventDefault(); navTo('podcasts'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('podcasts')} onClick={(e) => handleCategoryClick(e, 'podcasts')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Audio Podcasts
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('gallery')} onClick={(e) => { e.preventDefault(); navTo('gallery'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('gallery')} onClick={(e) => handleCategoryClick(e, 'gallery')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Photojournalism
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('fact-checking')} onClick={(e) => { e.preventDefault(); navTo('fact-checking'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('fact-checking')} onClick={(e) => handleCategoryClick(e, 'fact-checking')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Knews254 Verify
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('opinion')} onClick={(e) => { e.preventDefault(); navTo('opinion'); }} className="hover:text-red-400 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('opinion')} onClick={(e) => handleCategoryClick(e, 'opinion')} className="hover:text-red-400 transition text-left block cursor-pointer">
                   Opinion & Editorials
                 </a>
               </li>
@@ -393,47 +397,47 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-slate-400">
               <li>
-                <a href={getCategoryHref('editorial-policy')} onClick={(e) => { e.preventDefault(); navTo('editorial-policy'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('editorial-policy')} onClick={(e) => handleCategoryClick(e, 'editorial-policy')} className="hover:text-white transition text-left block cursor-pointer">
                   Editorial Policy
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('ethics-policy')} onClick={(e) => { e.preventDefault(); navTo('ethics-policy'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('ethics-policy')} onClick={(e) => handleCategoryClick(e, 'ethics-policy')} className="hover:text-white transition text-left block cursor-pointer">
                   Code of Ethics
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('factcheck-methodology')} onClick={(e) => { e.preventDefault(); navTo('factcheck-methodology'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('factcheck-methodology')} onClick={(e) => handleCategoryClick(e, 'factcheck-methodology')} className="hover:text-white transition text-left block cursor-pointer">
                   Fact-Check Method
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('anonymous-sources')} onClick={(e) => { e.preventDefault(); navTo('anonymous-sources'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('anonymous-sources')} onClick={(e) => handleCategoryClick(e, 'anonymous-sources')} className="hover:text-white transition text-left block cursor-pointer">
                   Anonymous Sources
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('ai-policy')} onClick={(e) => { e.preventDefault(); navTo('ai-policy'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('ai-policy')} onClick={(e) => handleCategoryClick(e, 'ai-policy')} className="hover:text-white transition text-left block cursor-pointer">
                   AI Usage Policy
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('corrections-policy')} onClick={(e) => { e.preventDefault(); navTo('corrections-policy'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('corrections-policy')} onClick={(e) => handleCategoryClick(e, 'corrections-policy')} className="hover:text-white transition text-left block cursor-pointer">
                   Corrections Policy
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('transparency-report')} onClick={(e) => { e.preventDefault(); navTo('transparency-report'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('transparency-report')} onClick={(e) => handleCategoryClick(e, 'transparency-report')} className="hover:text-white transition text-left block cursor-pointer">
                   Ownership & Funding
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('community-guidelines')} onClick={(e) => { e.preventDefault(); navTo('community-guidelines'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('community-guidelines')} onClick={(e) => handleCategoryClick(e, 'community-guidelines')} className="hover:text-white transition text-left block cursor-pointer">
                   Community Rules
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('takedown-policy')} onClick={(e) => { e.preventDefault(); navTo('takedown-policy'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('takedown-policy')} onClick={(e) => handleCategoryClick(e, 'takedown-policy')} className="hover:text-white transition text-left block cursor-pointer">
                   Copyright & Takedown
                 </a>
               </li>
@@ -447,47 +451,47 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-slate-400">
               <li>
-                <a href={getCategoryHref('about')} onClick={(e) => { e.preventDefault(); navTo('about'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('about')} onClick={(e) => handleCategoryClick(e, 'about')} className="hover:text-white transition text-left block cursor-pointer">
                   About Knews254
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('authors')} onClick={(e) => { e.preventDefault(); navTo('authors'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('authors')} onClick={(e) => handleCategoryClick(e, 'authors')} className="hover:text-white transition text-left block cursor-pointer">
                   Editorial Board
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('contact')} onClick={(e) => { e.preventDefault(); navTo('contact'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('contact')} onClick={(e) => handleCategoryClick(e, 'contact')} className="hover:text-white transition text-left block cursor-pointer">
                   Contact Newsroom
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('careers')} onClick={(e) => { e.preventDefault(); navTo('careers'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('careers')} onClick={(e) => handleCategoryClick(e, 'careers')} className="hover:text-white transition text-left block cursor-pointer">
                   Careers & Fellowships
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('advertise')} onClick={(e) => { e.preventDefault(); navTo('advertise'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('advertise')} onClick={(e) => handleCategoryClick(e, 'advertise')} className="hover:text-white transition text-left block cursor-pointer">
                   Advertise & Sponsor
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('reviews')} onClick={(e) => { e.preventDefault(); navTo('reviews'); }} className="hover:text-white transition text-left text-amber-400 font-bold block cursor-pointer">
+                <a href={getCategoryHref('reviews')} onClick={(e) => handleCategoryClick(e, 'reviews')} className="hover:text-white transition text-left text-amber-400 font-bold block cursor-pointer">
                   Reader Reviews & Ratings
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('how-we-review')} onClick={(e) => { e.preventDefault(); navTo('how-we-review'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('how-we-review')} onClick={(e) => handleCategoryClick(e, 'how-we-review')} className="hover:text-white transition text-left block cursor-pointer">
                   How We Review Claims
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('faq')} onClick={(e) => { e.preventDefault(); navTo('faq'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('faq')} onClick={(e) => handleCategoryClick(e, 'faq')} className="hover:text-white transition text-left block cursor-pointer">
                   FAQ Centre
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('help-center')} onClick={(e) => { e.preventDefault(); navTo('help-center'); }} className="hover:text-white transition text-left block cursor-pointer">
+                <a href={getCategoryHref('help-center')} onClick={(e) => handleCategoryClick(e, 'help-center')} className="hover:text-white transition text-left block cursor-pointer">
                   Help & Support Desk
                 </a>
               </li>
@@ -495,22 +499,22 @@ export const Footer: React.FC<FooterProps> = ({
                 Regional Bureaus
               </li>
               <li>
-                <a href={getCategoryHref('county')} onClick={(e) => { e.preventDefault(); navTo('county'); }} className="hover:text-slate-200 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('county')} onClick={(e) => handleCategoryClick(e, 'county')} className="hover:text-slate-200 transition text-left block cursor-pointer">
                   Nairobi HQ Desk
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('county')} onClick={(e) => { e.preventDefault(); navTo('county'); }} className="hover:text-slate-200 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('county')} onClick={(e) => handleCategoryClick(e, 'county')} className="hover:text-slate-200 transition text-left block cursor-pointer">
                   Mombasa Coast Bureau
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('county')} onClick={(e) => { e.preventDefault(); navTo('county'); }} className="hover:text-slate-200 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('county')} onClick={(e) => handleCategoryClick(e, 'county')} className="hover:text-slate-200 transition text-left block cursor-pointer">
                   Kisumu Nyanza Bureau
                 </a>
               </li>
               <li>
-                <a href={getCategoryHref('county')} onClick={(e) => { e.preventDefault(); navTo('county'); }} className="hover:text-slate-200 transition text-left block cursor-pointer">
+                <a href={getCategoryHref('county')} onClick={(e) => handleCategoryClick(e, 'county')} className="hover:text-slate-200 transition text-left block cursor-pointer">
                   Eldoret Rift Bureau
                 </a>
               </li>
@@ -592,19 +596,38 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-4 font-mono">
-            <a href={getCategoryHref('privacy-policy')} onClick={(e) => { e.preventDefault(); navTo('privacy-policy'); }} className="hover:text-slate-300 transition cursor-pointer">
+            <a href={getCategoryHref('privacy-policy')} onClick={(e) => handleCategoryClick(e, 'privacy-policy')} className="hover:text-slate-300 transition cursor-pointer">
               Privacy Policy
             </a>
             <span>•</span>
-            <a href={getCategoryHref('cookie-policy')} onClick={(e) => { e.preventDefault(); navTo('cookie-policy'); }} className="hover:text-slate-300 transition cursor-pointer">
+            <a 
+              href={getCategoryHref('cookie-policy')} 
+              onClick={(e) => { 
+                if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
+                  e.preventDefault(); 
+                  handleCategoryClick(e, 'cookie-policy'); 
+                  window.dispatchEvent(new CustomEvent('knews254_open_cookie_modal'));
+                }
+              }} 
+              className="hover:text-slate-300 transition cursor-pointer flex items-center gap-1"
+            >
               Cookie Policy
             </a>
             <span>•</span>
-            <a href={getCategoryHref('terms-of-service')} onClick={(e) => { e.preventDefault(); navTo('terms-of-service'); }} className="hover:text-slate-300 transition cursor-pointer">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('knews254_open_cookie_modal'))}
+              className="hover:text-amber-400 text-amber-500/90 font-bold transition cursor-pointer flex items-center gap-1"
+              title="Manage Cookie Preferences"
+            >
+              🍪 Cookie Settings
+            </button>
+            <span>•</span>
+            <a href={getCategoryHref('terms-of-service')} onClick={(e) => handleCategoryClick(e, 'terms-of-service')} className="hover:text-slate-300 transition cursor-pointer">
               Terms of Service
             </a>
             <span>•</span>
-            <a href={getCategoryHref('contact')} onClick={(e) => { e.preventDefault(); navTo('contact'); }} className="hover:text-slate-300 transition cursor-pointer">
+            <a href={getCategoryHref('contact')} onClick={(e) => handleCategoryClick(e, 'contact')} className="hover:text-slate-300 transition cursor-pointer">
               Contact Desk
             </a>
             <span>•</span>

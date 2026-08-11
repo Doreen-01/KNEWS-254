@@ -351,24 +351,29 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   /* VARIANT 2: HORIZONTAL ROW CARD (Ideal for Sidebars / Secondary Streams)    */
   /* -------------------------------------------------------------------------- */
   if (variant === 'horizontal') {
+    const articleLink = `/article/${encodeURIComponent(article.slug || article.id)}`;
+    const categoryLink = article.category === 'home' ? '/' : `/${encodeURIComponent(article.category)}`;
+
     return (
       <div 
         onClick={() => onSelect(article)}
         className="p-3.5 bg-slate-900 hover:bg-slate-850 rounded-2xl border border-slate-800/80 transition-all duration-300 cursor-pointer group flex gap-3.5 items-center hover:border-red-500/40 hover:shadow-lg relative"
       >
         <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-slate-950 overflow-hidden shrink-0 relative">
-          <img 
-            src={article.imageUrl || DEFAULT_NEWS_IMAGE} 
-            alt={article.title} 
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = DEFAULT_NEWS_IMAGE;
-            }}
-            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-            loading="lazy"
-          />
+          <a href={articleLink} onClick={(e) => { e.preventDefault(); onSelect(article); }} className="block w-full h-full">
+            <img 
+              src={article.imageUrl || DEFAULT_NEWS_IMAGE} 
+              alt={article.title} 
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_NEWS_IMAGE;
+              }}
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+              loading="lazy"
+            />
+          </a>
           {article.isBreaking && (
-            <span className="absolute top-1 left-1 bg-red-600 text-white font-black text-[8px] px-1.5 py-0.5 rounded uppercase tracking-wider">
+            <span className="absolute top-1 left-1 bg-red-600 text-white font-black text-[8px] px-1.5 py-0.5 rounded uppercase tracking-wider pointer-events-none">
               LIVE
             </span>
           )}
@@ -376,17 +381,27 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
         <div className="space-y-1.5 flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[9px] font-mono font-bold uppercase text-red-400 tracking-wider">
+            <a
+              href={categoryLink}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (onSelectCategory) onSelectCategory(article.category);
+              }}
+              className="text-[9px] font-mono font-bold uppercase text-red-400 hover:text-red-300 tracking-wider transition"
+            >
               {article.category}
-            </span>
+            </a>
             <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1">
               <Clock className="w-3 h-3" /> {article.readTime}
             </span>
           </div>
 
-          <h3 className="text-xs sm:text-sm font-bold text-slate-100 group-hover:text-red-400 transition line-clamp-2 leading-snug font-serif">
-            {article.title}
-          </h3>
+          <a href={articleLink} onClick={(e) => { e.preventDefault(); onSelect(article); }} className="block">
+            <h3 className="text-xs sm:text-sm font-bold text-slate-100 group-hover:text-red-400 transition line-clamp-2 leading-snug font-serif">
+              {article.title}
+            </h3>
+          </a>
 
           <p className="text-[11px] text-slate-400 line-clamp-1 leading-normal">
             {article.summary}
@@ -427,25 +442,42 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
   /* VARIANT 3: MINIMAL TEXT-ONLY CARD (Ideal for High-Density Trending Lists)  */
   /* -------------------------------------------------------------------------- */
   if (variant === 'minimal') {
+    const articleLink = `/article/${encodeURIComponent(article.slug || article.id)}`;
+    const categoryLink = article.category === 'home' ? '/' : `/${encodeURIComponent(article.category)}`;
+
     return (
-      <div 
-        onClick={() => onSelect(article)}
-        className="py-3 border-b border-slate-800/80 hover:border-red-500/40 transition cursor-pointer group space-y-1"
+      <a 
+        href={articleLink}
+        onClick={(e) => { e.preventDefault(); onSelect(article); }}
+        className="py-3 border-b border-slate-800/80 hover:border-red-500/40 transition cursor-pointer group space-y-1 block"
       >
         <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-          <span className="text-red-400 uppercase font-bold">{article.category}</span>
+          <span 
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              if (onSelectCategory) onSelectCategory(article.category);
+              else window.history.pushState({}, '', categoryLink);
+            }}
+            className="text-red-400 uppercase font-bold hover:underline"
+          >
+            {article.category}
+          </span>
           <span>{article.readTime}</span>
         </div>
-        <h4 className="text-xs font-bold text-slate-200 group-hover:text-red-400 transition leading-snug">
+        <h4 className="text-xs font-bold text-slate-200 group-hover:text-red-400 transition leading-snug font-serif">
           {article.title}
         </h4>
-      </div>
+      </a>
     );
   }
 
   /* -------------------------------------------------------------------------- */
   /* VARIANT 4: STANDARD CARD (Default Grid Layout Card)                        */
   /* -------------------------------------------------------------------------- */
+  const articleLink = `/article/${encodeURIComponent(article.slug || article.id)}`;
+  const categoryLink = article.category === 'home' ? '/' : `/${encodeURIComponent(article.category)}`;
+
   return (
     <div 
       onClick={() => onSelect(article)}
@@ -454,17 +486,19 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
       <div>
         {/* Aspect Ratio Image Container */}
         <div className="relative aspect-[16/10] bg-slate-950 overflow-hidden">
-          <img 
-            src={article.imageUrl || DEFAULT_NEWS_IMAGE} 
-            alt={article.title} 
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = DEFAULT_NEWS_IMAGE;
-            }}
-            className="w-full h-full object-cover group-hover:scale-105 transition duration-500 filter brightness-95"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+          <a href={articleLink} onClick={(e) => { e.preventDefault(); onSelect(article); }} className="block w-full h-full">
+            <img 
+              src={article.imageUrl || DEFAULT_NEWS_IMAGE} 
+              alt={article.title} 
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_NEWS_IMAGE;
+              }}
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-500 filter brightness-95"
+              loading="lazy"
+            />
+          </a>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent pointer-events-none" />
 
           <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
             {article.isBreaking && (
@@ -472,9 +506,17 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
                 <Flame className="w-2.5 h-2.5" /> LIVE
               </span>
             )}
-            <span className="bg-slate-950/80 backdrop-blur text-slate-200 text-[9px] font-mono font-bold px-2 py-0.5 rounded border border-slate-800 uppercase">
+            <a
+              href={categoryLink}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (onSelectCategory) onSelectCategory(article.category);
+              }}
+              className="bg-slate-950/80 hover:bg-slate-900 text-slate-200 text-[9px] font-mono font-bold px-2 py-0.5 rounded border border-slate-800 uppercase hover:text-red-400 transition"
+            >
               {article.category}
-            </span>
+            </a>
           </div>
 
           <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
@@ -502,9 +544,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
 
         {/* Card Content Body */}
         <div className="p-4 space-y-2">
-          <h3 className="text-sm md:text-base font-bold text-slate-100 group-hover:text-red-400 transition line-clamp-2 leading-snug font-serif">
-            {article.title}
-          </h3>
+          <a href={articleLink} onClick={(e) => { e.preventDefault(); onSelect(article); }} className="block">
+            <h3 className="text-sm md:text-base font-bold text-slate-100 group-hover:text-red-400 transition line-clamp-2 leading-snug font-serif">
+              {article.title}
+            </h3>
+          </a>
           <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
             {article.summary}
           </p>
