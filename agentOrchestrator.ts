@@ -13,6 +13,7 @@ export interface NewsroomPipelineInput {
   language?: NewsroomLanguage;
   targetLanguages?: NewsroomLanguage[];
   mode?: NewsroomMode;
+  evidence?: Array<{ title?: string; url?: string; excerpt?: string }>;
 }
 
 export interface NewsroomPipelineOutput {
@@ -32,6 +33,17 @@ export interface NewsroomPipelineOutput {
     risks: string[];
     missingContext: string[];
     recommendedActions: string[];
+  };
+  researchPlan: {
+    questions: string[];
+    preferredSources: string[];
+    searchQueries: string[];
+  };
+  evidenceLedger: Array<{ claim: string; status: "supported" | "unsupported" | "needs_review"; evidence: string[] }>;
+  selfReview: {
+    passed: boolean;
+    issues: string[];
+    changes: string[];
   };
   seo: {
     slug: string;
@@ -93,6 +105,21 @@ const fallbackOutput = (input: NewsroomPipelineInput): NewsroomPipelineOutput =>
       missingContext: ["Source provenance", "Independent confirmation"],
       recommendedActions: ["Assign a human editor", "Verify all material claims", "Check legal and safety implications"],
     },
+    researchPlan: {
+      questions: ["What primary record supports the central claim?", "Can an independent source corroborate the material facts?"],
+      preferredSources: ["Official government records", "Court or parliamentary records", "Named on-record sources", "Independent reputable reporting"],
+      searchQueries: [headline, `${headline} official source`],
+    },
+    evidenceLedger: [{
+      claim: "Article claims",
+      status: "needs_review",
+      evidence: input.source ? [input.source] : [],
+    }],
+    selfReview: {
+      passed: false,
+      issues: ["AI provider unavailable; no automated second-pass review was run."],
+      changes: ["Marked output as requiring human review."],
+    },
     seo: {
       slug: slugify(headline),
       metaTitle: headline.slice(0, 60),
@@ -139,6 +166,11 @@ export async function runNewsroomPipeline(
     language: rawInput.language || "English",
     targetLanguages: rawInput.targetLanguages || [],
     mode: rawInput.mode || "draft",
+    evidence: Array.isArray(rawInput.evidence) ? rawInput.evidence.slice(0, 20).map((item) => ({
+      title: clean(item?.title, 200),
+      url: clean(item?.url, 500),
+      excerpt: clean(item?.excerpt, 1_000),
+    })) : [],
   };
 
   if (!input.content) {
@@ -171,6 +203,9 @@ Return only valid JSON matching this shape exactly:
   "claimsForVerification": ["string"],
   "verification": {"verdict":"verified_pending_review"|"mixed"|"insufficient_evidence","confidence":0,"rationale":"string","evidenceNeeded":["string"]},
   "editorial": {"angle":"string","risks":["string"],"missingContext":["string"],"recommendedActions":["string"]},
+  "researchPlan": {"questions":["string"],"preferredSources":["string"],"searchQueries":["string"]},
+  "evidenceLedger": [{"claim":"string","status":"supported"|"unsupported"|"needs_review","evidence":["string"]}],
+  "selfReview": {"passed":false,"issues":["string"],"changes":["string"]},
   "seo": {"slug":"string","metaTitle":"string","metaDescription":"string","keywords":["string"]},
   "translations": [{"language":"English"|"Kiswahili"|"Sheng","headline":"string","summary":"string"}],
   "socialDrafts": [{"platform":"linkedin"|"instagram"|"x"|"whatsapp","copy":"string","hashtags":["string"],"approvalRequired":true,"publishStatus":"draft"}],
@@ -186,6 +221,7 @@ County: ${JSON.stringify(input.county || "Not supplied")}
 Category: ${JSON.stringify(input.category || "Not supplied")}
 Language: ${JSON.stringify(input.language)}
 Target translation languages: ${JSON.stringify(input.targetLanguages)}
+Supplied evidence: ${JSON.stringify(input.evidence || [])}
 Mode: ${JSON.stringify(input.mode)}`;
 
   const response = await ai.models.generateContent({
@@ -195,20 +231,62 @@ Mode: ${JSON.stringify(input.mode)}`;
   });
 
   const parsed = parseModelJson(response.text || "{}");
-  return {
+  const normalized = {
     ...parsed,
-    status: "needs_human_review",
+    status: "needs_human_review" as const,
     audit: {
       ...parsed.audit,
       agentsRun: AGENTS,
       sourceProvided: Boolean(input.source),
-      externalPublishing: "disabled",
-      humanApprovalRequired: true,
+      externalPublishing: "disabled" as const,
+      humanApprovalRequired: true as const,
     },
     socialDrafts: (parsed.socialDrafts || []).map((draft) => ({
       ...draft,
-      approvalRequired: true,
-      publishStatus: "draft",
+      approvalRequired: true as const,
+      publishStatus: "draft" as const,
+    })),
+  };
+
+  // Second-pass critic: check evidence discipline, uncertainty, safety, and output completeness.
+  const reviewPrompt = `You are the senior Knews254 quality reviewer. Review this proposed newsroom output against the source article and supplied evidence. Do not add facts that are absent from the source or evidence. Correct unsupported certainty, fabricated attribution, unsafe language, missing risks, and malformed fields. Keep all social content as drafts. Return the complete corrected JSON object, with selfReview.passed true only when the structure and safety checks pass; otherwise list issues and changes.
+
+Source article: ${JSON.stringify({ title: input.title, content: input.content, source: input.source, evidence: input.evidence })}
+Proposed output: ${JSON.stringify(normalized)}`;
+
+  const reviewResponse = await ai.models.generateContent({
+    model: "gemini-3.6-flash",
+    contents: reviewPrompt,
+    config: { responseMimeType: "application/json" },
+  });
+
+  let reviewed: NewsroomPipelineOutput;
+  try {
+    reviewed = parseModelJson(reviewResponse.text || "{}");
+  } catch {
+    reviewed = normalized;
+  }
+
+  return {
+    ...normalized,
+    ...reviewed,
+    status: "needs_human_review",
+    audit: {
+      ...normalized.audit,
+      ...(reviewed.audit || {}),
+      agentsRun: [...AGENTS, "senior_quality_reviewer"],
+      sourceProvided: Boolean(input.source),
+      externalPublishing: "disabled",
+      humanApprovalRequired: true,
+    },
+    selfReview: {
+      ...(reviewed.selfReview || normalized.selfReview),
+      passed: Boolean(reviewed.selfReview?.passed),
+    },
+    socialDrafts: (reviewed.socialDrafts || normalized.socialDrafts).map((draft) => ({
+      ...draft,
+      approvalRequired: true as const,
+      publishStatus: "draft" as const,
     })),
   };
 }
