@@ -445,7 +445,7 @@ app.get("/api/ai/capabilities", (_req, res) => {
 // Coordinated newsroom pipeline: produces reviewable editorial outputs only.
 app.post("/api/ai/newsroom-pipeline", async (req, res) => {
   try {
-    const { title, content, source, author, county, category, language, targetLanguages, mode } = req.body || {};
+    const { title, content, source, author, county, category, language, targetLanguages, mode, evidence } = req.body || {};
     if (typeof content !== "string" || !content.trim()) {
       res.status(400).json({ error: "Content is required" });
       return;
@@ -460,6 +460,7 @@ app.post("/api/ai/newsroom-pipeline", async (req, res) => {
       language,
       targetLanguages,
       mode,
+      evidence,
     });
     res.setHeader("Cache-Control", "no-store");
     res.json(result);
@@ -472,7 +473,7 @@ app.post("/api/ai/newsroom-pipeline", async (req, res) => {
 // Social copy generation is deliberately draft-only; no external post is published here.
 app.post("/api/ai/social-drafts", async (req, res) => {
   try {
-    const { title, content, source, author, county, category, targetLanguages } = req.body || {};
+    const { title, content, source, author, county, category, targetLanguages, evidence } = req.body || {};
     if (typeof content !== "string" || !content.trim()) {
       res.status(400).json({ error: "Content is required" });
       return;
@@ -485,6 +486,7 @@ app.post("/api/ai/social-drafts", async (req, res) => {
       county,
       category,
       targetLanguages,
+      evidence,
       mode: "draft",
     });
     res.setHeader("Cache-Control", "no-store");
