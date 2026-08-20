@@ -11,6 +11,24 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "5mb" }));
 
+// Basic security hardening for the public API and SPA responses.
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  next();
+});
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_TEXT_LENGTH = 10_000;
+
+const cleanText = (value: unknown, maxLength = MAX_TEXT_LENGTH): string =>
+  typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+
+const isValidEmail = (value: unknown): value is string =>
+  typeof value === "string" && EMAIL_PATTERN.test(value.trim()) && value.length <= 254;
+
 // Initialize Gemini Client server-side safely
 let ai: GoogleGenAI | null = null;
 if (process.env.GEMINI_API_KEY) {
@@ -143,18 +161,21 @@ const vettingRequestsStore: VettingRequest[] = [
 app.post("/api/contact", (req, res) => {
   try {
     const { name, email, subject, message, type } = req.body;
-    if (!name || !email || !message) {
-      res.status(400).json({ error: "Name, email, and message are required fields." });
+    const cleanName = cleanText(name, 120);
+    const cleanEmail = cleanText(email, 254).toLowerCase();
+    const cleanMessage = cleanText(message);
+    if (!cleanName || !isValidEmail(cleanEmail) || !cleanMessage) {
+      res.status(400).json({ error: "A valid name, email, and message are required." });
       return;
     }
 
     const newMessage: ContactMessage = {
       id: `msg-${Date.now().toString().slice(-4)}`,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      subject: subject || "General Inquiry",
-      message: message.trim(),
-      type: type || "General Contact",
+      name: cleanName,
+      email: cleanEmail,
+      subject: cleanText(subject, 200) || "General Inquiry",
+      message: cleanMessage,
+      type: cleanText(type, 100) || "General Contact",
       timestamp: new Date().toISOString().replace("T", " ").substring(0, 16) + " EAT",
       status: "UNREAD"
     };
@@ -174,26 +195,32 @@ app.post("/api/contact", (req, res) => {
 });
 
 app.get("/api/contact", (_req, res) => {
-  res.json({ count: contactMessages.length, messages: contactMessages });
+  res.status(404).json({ error: "This administrative endpoint is not publicly available." });
 });
 
 // 2. NEWSLETTER SUBSCRIPTION ENDPOINTS
 app.post("/api/subscribe", (req, res) => {
   try {
     const { email, frequency } = req.body;
-    if (!email || !email.includes("@")) {
+    const cleanEmail = cleanText(email, 254).toLowerCase();
+    const allowedFrequencies = new Set(["daily", "weekly", "breaking"]);
+    const cleanFrequency = cleanText(frequency, 20).toLowerCase();
+    if (!isValidEmail(cleanEmail)) {
       res.status(400).json({ error: "A valid email address is required." });
       return;
     }
+    if (cleanFrequency && !allowedFrequencies.has(cleanFrequency)) {
+      res.status(400).json({ error: "Frequency must be daily, weekly, or breaking." });
+      return;
+    }
 
-    const cleanEmail = email.trim().toLowerCase();
     const existing = newsletterSubscribers.find(s => s.email === cleanEmail);
     if (existing) {
-      existing.frequency = frequency || existing.frequency;
+      existing.frequency = cleanFrequency || existing.frequency;
       res.json({
         success: true,
         message: `Email ${cleanEmail} is already subscribed. Subscription settings updated to ${existing.frequency}.`,
-        subscriber: existing
+        subscriber: { frequency: existing.frequency, status: existing.status }
       });
       return;
     }
@@ -201,7 +228,7 @@ app.post("/api/subscribe", (req, res) => {
     const newSub: Subscriber = {
       id: `sub-${Date.now().toString().slice(-4)}`,
       email: cleanEmail,
-      frequency: frequency || "daily",
+      frequency: cleanFrequency || "daily",
       subscribedAt: new Date().toISOString().substring(0, 10),
       status: "ACTIVE"
     };
@@ -212,7 +239,7 @@ app.post("/api/subscribe", (req, res) => {
     res.json({
       success: true,
       message: `✓ Successfully subscribed ${cleanEmail} to Knews254 Morning Dispatch! Next dispatch arrives at 6:00 AM EAT.`,
-      subscriber: newSub
+      subscriber: { frequency: newSub.frequency, status: newSub.status }
     });
   } catch (error) {
     console.error("Error subscribing user:", error);
@@ -221,24 +248,25 @@ app.post("/api/subscribe", (req, res) => {
 });
 
 app.get("/api/subscribers", (_req, res) => {
-  res.json({ totalSubscribers: newsletterSubscribers.length, subscribers: newsletterSubscribers });
+  res.status(404).json({ error: "This administrative endpoint is not publicly available." });
 });
 
 // 3. CONFIDENTIAL WHISTLEBLOWER TIPOFF ENDPOINTS
 app.post("/api/tipoff", (req, res) => {
   try {
     const { alias, category, details, contactPhone } = req.body;
-    if (!details) {
+    const cleanDetails = cleanText(details);
+    if (!cleanDetails) {
       res.status(400).json({ error: "Tipoff details are required." });
       return;
     }
 
     const newTip: Tipoff = {
       id: `tip-${Date.now().toString().slice(-4)}`,
-      alias: alias || "Anonymous Whistleblower",
-      category: category || "Investigative Leak",
-      details: details.trim(),
-      contactPhone: contactPhone || "Encrypted Signal/WhatsApp",
+      alias: cleanText(alias, 120) || "Anonymous Whistleblower",
+      category: cleanText(category, 120) || "Investigative Leak",
+      details: cleanDetails,
+      contactPhone: cleanText(contactPhone, 80) || "Not provided",
       timestamp: new Date().toISOString().replace("T", " ").substring(0, 16) + " EAT",
       clearanceRequired: "LEVEL 3 CHIEF ADMIN"
     };
@@ -248,7 +276,7 @@ app.post("/api/tipoff", (req, res) => {
 
     res.json({
       success: true,
-      message: "✓ Confidential tipoff transmitted over AES-250 encrypted channel to Chief Administrator Kelly Muthomi Kinoti & Investigative Desk.",
+      message: "Your confidential tipoff was received by the investigative desk. Use an end-to-end encrypted channel for highly sensitive attachments.",
       tipId: newTip.id
     });
   } catch (error) {
@@ -257,27 +285,29 @@ app.post("/api/tipoff", (req, res) => {
 });
 
 app.get("/api/tipoffs", (_req, res) => {
-  res.json({ totalTips: tipoffsStore.length, tips: tipoffsStore });
+  res.status(404).json({ error: "This administrative endpoint is not publicly available." });
 });
 
 // 4. ACCREDITATION & VETTING ENDPOINTS
 app.post("/api/vetting", (req, res) => {
   try {
     const { name, email, phone, department, role, experience, credentialsBio } = req.body;
-    if (!name || !email) {
-      res.status(400).json({ error: "Name and email are required for vetting." });
+    const cleanName = cleanText(name, 120);
+    const cleanEmail = cleanText(email, 254).toLowerCase();
+    if (!cleanName || !isValidEmail(cleanEmail)) {
+      res.status(400).json({ error: "A valid name and email are required for vetting." });
       return;
     }
 
     const newReq: VettingRequest = {
       id: `vet-${Date.now().toString().slice(-4)}`,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone || "+254 700 000 000",
-      department: department || "Newsroom & Reporting Bureau",
-      role: role || "Reporter / Journalist",
-      experience: experience || "3+ Years Digital Media",
-      credentialsBio: credentialsBio || "Press accreditation applicant.",
+      name: cleanName,
+      email: cleanEmail,
+      phone: cleanText(phone, 40) || "Not provided",
+      department: cleanText(department, 120) || "Newsroom & Reporting Bureau",
+      role: cleanText(role, 120) || "Reporter / Journalist",
+      experience: cleanText(experience, 120) || "3+ Years Digital Media",
+      credentialsBio: cleanText(credentialsBio, 2_000) || "Press accreditation applicant.",
       score: "94/100",
       appliedDate: "Just Now",
       status: "PENDING_EXECUTIVE_VETTING"
@@ -287,7 +317,7 @@ app.post("/api/vetting", (req, res) => {
     res.json({
       success: true,
       message: `✓ Vetting application for ${name} submitted to Chairman Kelly Muthomi Kinoti & Editor Muchui Mwirigi.`,
-      request: newReq
+      request: { id: newReq.id, status: newReq.status, appliedDate: newReq.appliedDate }
     });
   } catch (error) {
     res.status(500).json({ error: "Vetting submission failed." });
@@ -295,7 +325,7 @@ app.post("/api/vetting", (req, res) => {
 });
 
 app.get("/api/vetting", (_req, res) => {
-  res.json({ totalQueue: vettingRequestsStore.length, queue: vettingRequestsStore });
+  res.status(404).json({ error: "This administrative endpoint is not publicly available." });
 });
 
 // 5. XML DYNAMIC SITEMAP ENDPOINT
