@@ -3,6 +3,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import { runNewsroomPipeline } from "./agentOrchestrator";
 
 dotenv.config();
 
@@ -413,6 +414,64 @@ app.get("/api/ready", (_req, res) => {
     }
   };
   res.status(supabaseConfigured ? 200 : 503).json(readiness);
+});
+
+// Coordinated newsroom pipeline: produces reviewable editorial outputs only.
+app.post("/api/ai/newsroom-pipeline", async (req, res) => {
+  try {
+    const { title, content, source, author, county, category, language, targetLanguages, mode } = req.body || {};
+    if (typeof content !== "string" || !content.trim()) {
+      res.status(400).json({ error: "Content is required" });
+      return;
+    }
+    const result = await runNewsroomPipeline(ai, {
+      title,
+      content,
+      source,
+      author,
+      county,
+      category,
+      language,
+      targetLanguages,
+      mode,
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.json(result);
+  } catch (error: any) {
+    console.error("Error in /api/ai/newsroom-pipeline:", error);
+    res.status(500).json({ error: "Newsroom pipeline failed", approvalRequired: true, externalPublishing: "disabled" });
+  }
+});
+
+// Social copy generation is deliberately draft-only; no external post is published here.
+app.post("/api/ai/social-drafts", async (req, res) => {
+  try {
+    const { title, content, source, author, county, category, targetLanguages } = req.body || {};
+    if (typeof content !== "string" || !content.trim()) {
+      res.status(400).json({ error: "Content is required" });
+      return;
+    }
+    const result = await runNewsroomPipeline(ai, {
+      title,
+      content,
+      source,
+      author,
+      county,
+      category,
+      targetLanguages,
+      mode: "draft",
+    });
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      status: "needs_human_review",
+      socialDrafts: result.socialDrafts,
+      verification: result.verification,
+      audit: result.audit,
+    });
+  } catch (error: any) {
+    console.error("Error in /api/ai/social-drafts:", error);
+    res.status(500).json({ error: "Social draft generation failed", approvalRequired: true, externalPublishing: "disabled" });
+  }
 });
 
 // AI Article Summarizer Route
