@@ -17,7 +17,7 @@ This document outlines the architectural fixes, security harding, database migra
 | **7** | Fix Image Uploads | **VERIFIED COMPLETE** | Storage uploads target `article-media` bucket strictly. Fallback to `media` bucket and Base64 stubs removed. |
 | **8** | Lock Dashboards by Auth Role | **VERIFIED COMPLETE** | Authentication and RBAC checked against `public.profiles.role`. Unlinked users denied CMS access. |
 | **9** | Separate Migration Files | **VERIFIED COMPLETE** | Generated clean fresh schema (`20260803000000_knews254_initial_schema.sql`) and defensive repair script (`20260804000000_knews254_existing_project_repair.sql`). |
-| **10** | Fix Vercel SPA Routing | **VERIFIED COMPLETE** | Created `vercel.json` with rewrite rule routing all paths to `/index.html`. |
+| **10** | Production Container Deployment | **VERIFIED COMPLETE** | Added a platform-aware Express server, reproducible `Dockerfile`, container ignore rules, CI validation, and health/readiness endpoints. |
 | **11** | Add Documentation | **VERIFIED COMPLETE** | Created `docs/OWNER_SETUP_CHECKLIST.md` and `docs/CHANGES_APPLIED.md`. |
 | **12** | Build and Test | **VERIFIED COMPLETE** | Executed `compile_applet` and verified production bundle builds cleanly. |
 | **13** | Final Report | **VERIFIED COMPLETE** | Delivered comprehensive report to project owner. |
@@ -52,8 +52,8 @@ This document outlines the architectural fixes, security harding, database migra
 6. **`/supabase/migrations/20260804000000_knews254_existing_project_repair.sql`**
    - Created defensive SQL repair script adding all missing columns (`deleted_at`, `is_featured`, `is_breaking`, `county`, `priority`, etc.), creating tables if missing, and refreshing RLS policies safely.
 
-7. **`/vercel.json`**
-   - Created Vercel configuration file for client-side SPA route rewrites.
+7. **`/Dockerfile` and `/.github/workflows/ci.yml`**
+   - Added reproducible production container build steps and CI validation for type-checking, application builds, and container builds.
 
 8. **`/docs/OWNER_SETUP_CHECKLIST.md`**
-   - Documented step-by-step setup, SQL migration execution guide (explaining how to avoid syntax error 42601), storage bucket creation, and Vercel setup.
+   - Documented step-by-step setup, SQL migration execution guidance, storage bucket creation, and container deployment.

@@ -1,6 +1,6 @@
 # KNEWS254 MEDIA NETWORK - OWNER SETUP CHECKLIST
 
-This checklist guides the system administrator through setting up, migrating, and deploying the **Knews254** production application on Supabase and Vercel.
+This checklist guides the system administrator through setting up, migrating, and deploying the **Knews254** production application on Supabase and a container platform.
 
 ---
 
@@ -13,7 +13,7 @@ This checklist guides the system administrator through setting up, migrating, an
 ---
 
 ## 2. Environment Variables Configuration
-Create or update your `.env` (or environment settings in AI Studio / Vercel):
+Create or update your `.env` or production platform environment settings:
 
 ```env
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
@@ -78,18 +78,10 @@ SET auth_user_id = EXCLUDED.auth_user_id,
 
 ---
 
-## 6. Vercel Deployment Instructions
-1. Push your repository to GitHub.
-2. Import the project in Vercel.
-3. Add Environment Variables in Vercel:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-4. Verify `vercel.json` exists at root level for SPA routing support:
-   ```json
-   {
-     "rewrites": [
-       { "source": "/(.*)", "destination": "/index.html" }
-     ]
-   }
-   ```
-5. Trigger build and deployment.
+## 6. Container Deployment Instructions
+1. Push the repository to GitHub.
+2. Build the included production image with `docker build --tag knews254:production .`.
+3. Deploy the image to the chosen container platform.
+4. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_APP_URL`, and any optional server-side variables to the platform environment.
+5. Configure the platform to provide `PORT` and use `GET /api/health` for liveness and `GET /api/ready` for readiness.
+6. Verify the public homepage, `/admin`, `/sitemap.xml`, `/rss.xml`, and Supabase authentication after deployment.

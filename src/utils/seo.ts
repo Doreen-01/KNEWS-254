@@ -38,7 +38,10 @@ export interface SeoMetadataResult {
   jsonLd: Record<string, any>[];
 }
 
-const DEFAULT_BASE_URL = 'https://knews-254.vercel.app';
+const configuredBaseUrl = typeof import.meta !== 'undefined'
+  ? String((import.meta as any).env?.VITE_APP_URL || '')
+  : '';
+const DEFAULT_BASE_URL = (configuredBaseUrl || 'https://knews254.co.ke').replace(/\/+$/, '');
 const DEFAULT_BRAND_IMAGE = 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=1200&auto=format&fit=crop&q=80';
 
 const CATEGORY_LABEL_MAP: Record<string, { name: string; desc: string }> = {

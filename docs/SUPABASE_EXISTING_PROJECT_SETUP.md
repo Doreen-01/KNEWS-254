@@ -1,16 +1,16 @@
 # KNEWS254 MEDIA NETWORK — EXISTING SUPABASE PROJECT SETUP GUIDE
 
-This guide provides step-by-step instructions for project owners and administrators to apply the **idempotent repair migration** to an existing Supabase instance, configure Authentication & Storage, and deploy the application to Vercel without data loss or downtime.
+This guide provides step-by-step instructions for project owners and administrators to apply the **idempotent repair migration** to an existing Supabase instance, configure Authentication & Storage, and deploy the application to the production container platform without data loss or downtime.
 
 ---
 
 ## Production Configuration Details
 
-- **Production Application URL**: `https://knews-254.vercel.app`
-- **Site URL**: `https://knews-254.vercel.app`
+- **Production Application URL**: `https://knews254.co.ke`
+- **Site URL**: `https://knews254.co.ke`
 - **Allowed Redirect URLs**:
-  - `https://knews-254.vercel.app`
-  - `https://knews-254.vercel.app/**`
+  - `https://knews254.co.ke`
+  - `https://knews254.co.ke/**`
   - `http://localhost:5173`
   - `http://localhost:5173/**`
 
@@ -32,7 +32,7 @@ Do **NOT** run `20260803000000_knews254_initial_schema.sql` on an existing datab
 ### How to Run the Repair Migration
 1. In your Supabase Dashboard, navigate to **SQL Editor**.
 2. Click **New query**.
-3. Open `supabase/migrations/20260804_knews254_existing_project_repair.sql` in your local text editor.
+3. Open `supabase/migrations/20260804000000_knews254_existing_project_repair.sql` in your local text editor.
 4. Copy the entire contents of the file.
 5. Paste the SQL code into the Supabase SQL Editor.
 6. Click **Run** (or press `Ctrl + Enter`).
@@ -106,29 +106,28 @@ WHERE schemaname = 'public';
 
 1. In Supabase Dashboard, navigate to **Authentication** -> **URL Configuration**.
 2. Set **Site URL** to:
-   `https://knews-254.vercel.app`
+   `https://knews254.co.ke`
 3. Under **Redirect URLs**, click **Add URL** and add the following entries:
-   - `https://knews-254.vercel.app`
-   - `https://knews-254.vercel.app/**`
+   - `https://knews254.co.ke`
+   - `https://knews254.co.ke/**`
    - `http://localhost:5173`
    - `http://localhost:5173/**`
 4. Under **Authentication** -> **Email Templates**, ensure confirmation email links are active if email verification is enabled.
 
 ---
 
-## 5. Vercel Deployment & Environment Variables
+## 5. Production Deployment & Environment Variables
 
-1. Log into your [Vercel Dashboard](https://vercel.com) and open the **knews-254** project.
-2. Go to **Settings** -> **Environment Variables**.
-3. Configure the following public variables for **Production**, **Preview**, and **Development**:
+1. Build the repository with the included `Dockerfile` and deploy the resulting container to the chosen production platform.
+2. Configure the following variables in the platform’s server-side environment settings:
 
 | Key | Value | Description |
 |---|---|---|
 | `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Your Supabase Project API URL |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbG...` | Your Supabase Public Anon Key |
 
-4. Trigger a new deployment in Vercel:
-   - Push a commit to main branch OR click **Deployments** -> **Redeploy** on the latest build.
+4. Set the container health check to `GET /api/health` and the readiness check to `GET /api/ready`.
+5. Deploy the container with `PORT` supplied by the platform. The included server honors that value.
 
 ---
 
@@ -137,7 +136,7 @@ WHERE schemaname = 'public';
 Follow this manual test scenario to confirm system integrity:
 
 1. **Journalist Login & Story Draft**:
-   - Access `https://knews-254.vercel.app/admin` (or local `/admin`).
+   - Access `https://knews254.co.ke/admin` (or local `/admin`).
    - Log in using a Journalist credential.
    - Click **+ New Article**.
    - Enter title, body, select county and category.
@@ -156,7 +155,7 @@ Follow this manual test scenario to confirm system integrity:
    - *Expected Outcome:* Article status updates to `published` with `published_at = NOW()`.
 
 4. **Public Site Reader Verification**:
-   - Open the homepage `https://knews-254.vercel.app`.
+   - Open the homepage `https://knews254.co.ke`.
    - Verify the newly published article appears in the top story feed and under its selected county/category.
    - Click on the article title to view full details.
 
@@ -169,5 +168,5 @@ Follow this manual test scenario to confirm system integrity:
 
 ## 7. Operational Notes & Limitations
 
-- **Spam Protection**: While Row Level Security guarantees database data isolation, public submission forms (`contact_messages`, `newsletter_subscribers`, `comments`, `vetting_requests`, `tipoffs`) should be paired with Cloudflare Turnstile or CAPTCHA on the frontend/API layer to prevent automated bot submissions.
+- **Spam Protection**: While Row Level Security guarantees database data isolation, public submission forms (`contact_messages`, `newsletter_subscribers`, `comments`, `vetting_requests`, `tipoffs`) should be paired with Cloudflare Turnstile or CAPTCHA on the frontend/API layer to prevent automated bot submissions before launch.
 - **Service Role Key Security**: Never add `SUPABASE_SERVICE_ROLE_KEY` to client-side Vite environment variables. All client operations interact strictly via `VITE_SUPABASE_ANON_KEY` enforced by Row Level Security.

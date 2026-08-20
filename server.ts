@@ -7,7 +7,7 @@ import { createServer as createViteServer } from "vite";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number.parseInt(process.env.PORT || "3000", 10) || 3000;
 
 app.use(express.json({ limit: "5mb" }));
 
@@ -393,7 +393,26 @@ app.get("/robots.txt", (_req, res) => {
 
 // API Routes
 app.get("/api/health", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   res.json({ status: "ok", app: "Knews254 Digital Media Backend", version: "3.2.0" });
+});
+
+app.get("/api/ready", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const supabaseConfigured = Boolean(
+    process.env.VITE_SUPABASE_URL &&
+    process.env.VITE_SUPABASE_ANON_KEY
+  );
+  const readiness = {
+    status: supabaseConfigured ? "ready" : "degraded",
+    app: "Knews254 Digital Media Backend",
+    checks: {
+      server: "ok",
+      supabaseClientConfig: supabaseConfigured ? "configured" : "missing",
+      aiProvider: process.env.GEMINI_API_KEY ? "configured" : "fallback-mode"
+    }
+  };
+  res.status(supabaseConfigured ? 200 : 503).json(readiness);
 });
 
 // AI Article Summarizer Route

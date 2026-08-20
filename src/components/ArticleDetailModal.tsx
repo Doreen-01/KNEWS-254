@@ -93,7 +93,7 @@ export const ArticleDetailModal: React.FC<ArticleDetailModalProps> = ({
 
   const articleCanonicalUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/?article=${encodeURIComponent(article.slug || article.id)}`
-    : `https://knews-254.vercel.app/?article=${encodeURIComponent(article.slug || article.id)}`;
+    : `https://knews254.co.ke/?article=${encodeURIComponent(article.slug || article.id)}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(articleCanonicalUrl);
