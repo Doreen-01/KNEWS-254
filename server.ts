@@ -416,6 +416,32 @@ app.get("/api/ready", (_req, res) => {
   res.status(supabaseConfigured ? 200 : 503).json(readiness);
 });
 
+// Agent capability manifest. This advertises readiness without exposing credentials or enabling external actions.
+app.get("/api/ai/capabilities", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    version: "2.0.0",
+    provider: ai ? "configured" : "fallback-mode",
+    agents: [
+      "editorial_planner",
+      "source_and_claim_reviewer",
+      "fact_check_reviewer",
+      "context_and_risk_editor",
+      "seo_editor",
+      "translation_editor",
+      "social_copy_editor",
+      "senior_quality_reviewer",
+    ],
+    outputs: ["research_plan", "evidence_ledger", "editorial_review", "seo_metadata", "translations", "social_drafts"],
+    externalPublishing: "disabled",
+    humanApprovalRequired: true,
+    liveIntegrations: {
+      supabaseManagement: "pending",
+      socialAccounts: "not_connected",
+    },
+  });
+});
+
 // Coordinated newsroom pipeline: produces reviewable editorial outputs only.
 app.post("/api/ai/newsroom-pipeline", async (req, res) => {
   try {
